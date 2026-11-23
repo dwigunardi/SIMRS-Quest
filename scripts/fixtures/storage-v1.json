@@ -1,0 +1,415 @@
+{
+  "simrs-sql-quest:progress:v1": {
+    "version": 1,
+    "xp": 760,
+    "streak": {
+      "current": 4,
+      "best": 4,
+      "lastActiveDate": "2026-11-22"
+    },
+    "missions": {
+      "t1-select": {
+        "completed": true,
+        "earnedXp": 50,
+        "hintUsed": false,
+        "hintsRevealed": 0,
+        "solutionShown": false,
+        "attempts": 1,
+        "completedAt": "2026-11-08T11:00:00.000Z"
+      },
+      "t1-where": {
+        "completed": true,
+        "earnedXp": 50,
+        "hintUsed": false,
+        "hintsRevealed": 0,
+        "solutionShown": false,
+        "attempts": 2,
+        "completedAt": "2026-11-08T11:07:00.000Z"
+      },
+      "t1-like": {
+        "completed": true,
+        "earnedXp": 40,
+        "hintUsed": true,
+        "hintsRevealed": 1,
+        "solutionShown": false,
+        "attempts": 1,
+        "completedAt": "2026-11-08T11:20:00.000Z"
+      },
+      "t1-order-limit": {
+        "completed": true,
+        "earnedXp": 50,
+        "hintUsed": false,
+        "hintsRevealed": 0,
+        "solutionShown": false,
+        "attempts": 1,
+        "completedAt": "2026-11-09T11:02:00.000Z"
+      },
+      "t1-distinct": {
+        "completed": true,
+        "earnedXp": 40,
+        "hintUsed": true,
+        "hintsRevealed": 2,
+        "solutionShown": false,
+        "attempts": 3,
+        "completedAt": "2026-11-09T11:18:00.000Z"
+      },
+      "t1-predict-distinct": {
+        "completed": true,
+        "earnedXp": 50,
+        "hintUsed": false,
+        "hintsRevealed": 0,
+        "solutionShown": false,
+        "attempts": 2,
+        "completedAt": "2026-11-09T11:32:00.000Z"
+      },
+      "t1-fix-tagihan": {
+        "completed": true,
+        "earnedXp": 0,
+        "hintUsed": true,
+        "hintsRevealed": 3,
+        "solutionShown": true,
+        "attempts": 2,
+        "completedAt": "2026-11-10T11:15:00.000Z"
+      },
+      "boss-t1-skrining": {
+        "completed": true,
+        "earnedXp": 100,
+        "hintUsed": false,
+        "hintsRevealed": 0,
+        "solutionShown": false,
+        "attempts": 2,
+        "completedAt": "2026-11-10T11:55:00.000Z"
+      },
+      "t2-inner-join": {
+        "completed": true,
+        "earnedXp": 100,
+        "hintUsed": false,
+        "hintsRevealed": 0,
+        "solutionShown": false,
+        "attempts": 1,
+        "completedAt": "2026-11-19T11:05:00.000Z"
+      },
+      "t2-left-join": {
+        "completed": true,
+        "earnedXp": 80,
+        "hintUsed": true,
+        "hintsRevealed": 1,
+        "solutionShown": false,
+        "attempts": 2,
+        "completedAt": "2026-11-19T11:28:00.000Z"
+      },
+      "t2-count-group": {
+        "completed": true,
+        "earnedXp": 100,
+        "hintUsed": false,
+        "hintsRevealed": 0,
+        "solutionShown": false,
+        "attempts": 1,
+        "completedAt": "2026-11-20T11:10:00.000Z"
+      },
+      "t2-sum-avg": {
+        "completed": true,
+        "earnedXp": 100,
+        "hintUsed": false,
+        "hintsRevealed": 0,
+        "solutionShown": false,
+        "attempts": 4,
+        "completedAt": "2026-11-21T11:15:00.000Z"
+      },
+      "t2-having": {
+        "completed": false,
+        "earnedXp": 0,
+        "hintUsed": true,
+        "hintsRevealed": 1,
+        "solutionShown": false,
+        "attempts": 2,
+        "completedAt": null
+      }
+    },
+    "lastMissionId": "t2-having"
+  },
+  "simrs-sql-quest:mistakes:v1": {
+    "events": [
+      {
+        "missionId": "t1-where",
+        "kind": "rows-missing",
+        "at": "2026-11-08T11:05:00.000Z"
+      },
+      {
+        "missionId": "t1-distinct",
+        "kind": "columns",
+        "at": "2026-11-09T11:10:00.000Z"
+      },
+      {
+        "missionId": "t1-distinct",
+        "kind": "rows-extra",
+        "at": "2026-11-09T11:12:00.000Z"
+      },
+      {
+        "missionId": "t1-predict-distinct",
+        "kind": "reading",
+        "at": "2026-11-09T11:30:00.000Z"
+      },
+      {
+        "missionId": "t1-fix-tagihan",
+        "kind": "values",
+        "at": "2026-11-10T11:05:00.000Z"
+      },
+      {
+        "missionId": "boss-t1-skrining",
+        "kind": "values",
+        "at": "2026-11-10T11:40:00.000Z"
+      },
+      {
+        "missionId": "t2-left-join",
+        "kind": "rows-missing",
+        "at": "2026-11-19T11:20:00.000Z"
+      },
+      {
+        "missionId": "t1-like",
+        "kind": "rows-extra",
+        "at": "2026-11-20T12:13:00.000Z"
+      },
+      {
+        "missionId": "t2-sum-avg",
+        "kind": "aggregate",
+        "at": "2026-11-21T11:05:00.000Z"
+      },
+      {
+        "missionId": "t2-sum-avg",
+        "kind": "aggregate",
+        "at": "2026-11-21T11:08:00.000Z"
+      },
+      {
+        "missionId": "t2-sum-avg",
+        "kind": "values",
+        "at": "2026-11-21T11:12:00.000Z"
+      },
+      {
+        "missionId": "t2-having",
+        "kind": "aggregate",
+        "at": "2026-11-22T11:30:00.000Z"
+      },
+      {
+        "missionId": "t2-having",
+        "kind": "syntax",
+        "at": "2026-11-22T11:33:00.000Z"
+      },
+      {
+        "missionId": "t1-where",
+        "kind": "rows-missing",
+        "at": "2026-11-22T12:06:00.000Z"
+      }
+    ],
+    "solved": {
+      "t1-select": "2026-11-20T12:13:00.000Z",
+      "t1-where": "2026-11-08T11:07:00.000Z",
+      "t1-like": "2026-11-22T12:06:00.000Z",
+      "t1-order-limit": "2026-11-20T12:13:00.000Z",
+      "t1-distinct": "2026-11-22T12:06:00.000Z",
+      "t1-predict-distinct": "2026-11-09T11:32:00.000Z",
+      "t1-fix-tagihan": "2026-11-10T11:15:00.000Z",
+      "boss-t1-skrining": "2026-11-10T11:55:00.000Z",
+      "t2-inner-join": "2026-11-20T12:13:00.000Z",
+      "t2-left-join": "2026-11-19T11:28:00.000Z",
+      "t2-count-group": "2026-11-20T11:10:00.000Z",
+      "t2-sum-avg": "2026-11-21T11:15:00.000Z"
+    }
+  },
+  "simrs-sql-quest:materi-read:v1": [
+    "urutan-eksekusi",
+    "select",
+    "where",
+    "like",
+    "order-limit",
+    "distinct",
+    "inner-join",
+    "left-join",
+    "agregasi",
+    "group-by"
+  ],
+  "simrs-sql-quest:brief-fold:v1": {
+    "storyExpanded": true,
+    "taskExpanded": true
+  },
+  "simrs-sql-quest:exam-session:v1": {
+    "id": "ujian-mwt71oqo-eeoz",
+    "purpose": "exam",
+    "config": {
+      "tiers": [
+        1,
+        2
+      ],
+      "count": 5,
+      "minutes": 30
+    },
+    "missionIds": [
+      "t2-having",
+      "t2-sum-avg",
+      "t1-predict-distinct",
+      "t1-fix-tagihan",
+      "t2-count-group"
+    ],
+    "answers": {
+      "t2-having": {
+        "kind": "sql",
+        "sql": "-- Tulis query kamu di sini\nSELECT "
+      },
+      "t2-sum-avg": {
+        "kind": "sql",
+        "sql": "-- Tulis query kamu di sini\nSELECT "
+      },
+      "t1-predict-distinct": {
+        "kind": "predict",
+        "choiceId": "d1"
+      },
+      "t1-fix-tagihan": {
+        "kind": "sql",
+        "sql": "-- Query dari rekan: 3 tunggakan terbesar (hasilnya keliru)\nSELECT\n  no_rawat,\n  total_biaya\nFROM billing\nWHERE status_bayar = 'Belum lunas'\nORDER BY total_biaya\nLIMIT 3;"
+      },
+      "t2-count-group": {
+        "kind": "sql",
+        "sql": "SELECT penjamin, COUNT(*) AS jumlah_pasien\nFROM pasien\nGROUP BY penjamin\nORDER BY jumlah_pasien DESC;"
+      }
+    },
+    "startedAt": "2026-11-23T11:40:00.000Z",
+    "deadline": "2026-11-23T12:10:00.000Z"
+  },
+  "simrs-sql-quest:exams:v1": [
+    {
+      "id": "ujian-mwoxfuo0-abjg",
+      "purpose": "exam",
+      "startedAt": "2026-11-20T12:00:00.000Z",
+      "finishedAt": "2026-11-20T12:13:00.000Z",
+      "timedOut": false,
+      "config": {
+        "tiers": [
+          1,
+          2
+        ],
+        "count": 5,
+        "minutes": 15
+      },
+      "items": [
+        {
+          "missionId": "t1-select",
+          "status": "correct",
+          "kind": null,
+          "message": "Benar.",
+          "answer": "SELECT no_rm, nama, tgl_lahir\nFROM pasien;"
+        },
+        {
+          "missionId": "t1-like",
+          "status": "wrong",
+          "kind": "rows-extra",
+          "message": "Jumlah baris berbeda: hasilmu 9 baris, seharusnya 6 baris.",
+          "answer": "SELECT no_rawat, kode_icd10, nama_penyakit\nFROM diagnosa\nWHERE kode_icd10 LIKE '%I%';"
+        },
+        {
+          "missionId": "t2-inner-join",
+          "status": "correct",
+          "kind": null,
+          "message": "Benar.",
+          "answer": "SELECT r.no_rawat, p.nama\nFROM registrasi r\nJOIN pasien p ON p.no_rm = r.no_rm;"
+        },
+        {
+          "missionId": "t1-order-limit",
+          "status": "correct",
+          "kind": null,
+          "message": "Benar.",
+          "answer": "SELECT no_rawat, total_tagihan\nFROM billing\nORDER BY total_tagihan DESC\nLIMIT 5;"
+        },
+        {
+          "missionId": "t1-predict-distinct",
+          "status": "unanswered",
+          "kind": null,
+          "message": "Tidak dijawab.",
+          "answer": ""
+        }
+      ]
+    },
+    {
+      "id": "ulang-mwrsbk00-3h9i",
+      "purpose": "review",
+      "startedAt": "2026-11-22T12:00:00.000Z",
+      "finishedAt": "2026-11-22T12:06:00.000Z",
+      "timedOut": false,
+      "config": {
+        "tiers": [
+          1
+        ],
+        "count": 3,
+        "minutes": null
+      },
+      "items": [
+        {
+          "missionId": "t1-where",
+          "status": "wrong",
+          "kind": "rows-missing",
+          "message": "Jumlah baris berbeda: hasilmu 3 baris, seharusnya 5 baris.",
+          "answer": "SELECT no_rm, nama, kota\nFROM pasien\nWHERE penjamin = 'BPJS' AND kota = 'Jakarta';"
+        },
+        {
+          "missionId": "t1-distinct",
+          "status": "correct",
+          "kind": null,
+          "message": "Benar.",
+          "answer": "SELECT DISTINCT kota\nFROM pasien\nORDER BY kota;"
+        },
+        {
+          "missionId": "t1-like",
+          "status": "correct",
+          "kind": null,
+          "message": "Benar.",
+          "answer": "SELECT no_rawat, kode_icd10, nama_penyakit\nFROM diagnosa\nWHERE kode_icd10 LIKE 'I%';"
+        }
+      ]
+    }
+  ],
+  "simrs-sql-quest:review:v1": {
+    "t1-select": {
+      "box": 1,
+      "due": "2026-11-23",
+      "reviews": 1,
+      "lapses": 0
+    },
+    "t1-like": {
+      "box": 1,
+      "due": "2026-11-25",
+      "reviews": 2,
+      "lapses": 1
+    },
+    "t2-inner-join": {
+      "box": 1,
+      "due": "2026-11-23",
+      "reviews": 1,
+      "lapses": 0
+    },
+    "t1-order-limit": {
+      "box": 1,
+      "due": "2026-11-23",
+      "reviews": 1,
+      "lapses": 0
+    },
+    "t1-where": {
+      "box": 0,
+      "due": "2026-11-23",
+      "reviews": 1,
+      "lapses": 1
+    },
+    "t1-distinct": {
+      "box": 1,
+      "due": "2026-11-25",
+      "reviews": 1,
+      "lapses": 0
+    }
+  },
+  "simrs-sql-quest:achievements-seen:v1": [
+    "hari-pertama",
+    "boss-pertama",
+    "bangkit",
+    "streak-3",
+    "ujian-pertama",
+    "rajin-membaca"
+  ]
+}

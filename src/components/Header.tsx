@@ -1,9 +1,13 @@
-import { ChartColumn, ClipboardCheck, Flame, Hospital, Library, ListChecks, RotateCcw, Target, Terminal, Zap } from 'lucide-react';
+import { ChartColumn, ClipboardCheck, Flame, Library, ListChecks, RotateCcw, Target, Terminal, Zap } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { getActiveStreak } from '../lib/progress';
+import { BrandMark } from '../platform/BrandMark';
+import { PRODUCT_NAME } from '../platform/brand';
 import type { AppMode, RankProgress, UserProgress } from '../types';
 
 export interface HeaderProps {
+  /** Kembali ke Beranda platform. Tanpa ini (App dirender berdiri sendiri) lambang produk hanya hiasan. */
+  onHome?: () => void;
   progress: UserProgress;
   rankProgress: RankProgress;
   completedCount: number;
@@ -37,6 +41,7 @@ const MODE_OPTIONS: ModeOption[] = [
 ];
 
 export function Header({
+  onHome,
   progress,
   rankProgress,
   completedCount,
@@ -55,8 +60,10 @@ export function Header({
 
   return (
     <header className="shrink-0 border-b border-slate-800 bg-slate-900/80 backdrop-blur">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3">
-        <Logo />
+      {/* Di bawah lg jarak & nama produk sedikit dirapatkan: pada lebar ±768px lambang + tombol mode (dengan jam ujian)
+          harus tetap muat sebaris, sama seperti sebelum ada tombol Beranda. */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-3 px-4 py-3 lg:gap-x-4">
+        <Brand onHome={onHome} />
         <ModeSwitch mode={mode} onModeChange={onModeChange} examClock={examClock} reviewDue={reviewDue} />
         <div className="ml-auto flex flex-wrap items-center gap-2 sm:gap-3">
           <RankMeter rankProgress={rankProgress} xp={progress.xp} />
@@ -104,18 +111,35 @@ export function Header({
   );
 }
 
-function Logo() {
+/**
+ * Lambang + nama produk sebagai tombol pulang ke Beranda, diikuti chip jalur. Chip itulah judul halaman (h1) di dalam
+ * jalur; nama produk tidak ditulis di sini melainkan diambil dari platform/brand.
+ */
+function Brand({ onHome }: { onHome?: () => void }) {
+  const mark = (
+    <>
+      <BrandMark />
+      <span className="whitespace-nowrap text-[15px] font-bold tracking-tight text-slate-100 lg:text-base">{PRODUCT_NAME}</span>
+    </>
+  );
   return (
-    <div className="flex items-center gap-2.5">
-      <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 text-slate-950 shadow-lg shadow-emerald-500/20">
-        <Hospital className="h-5 w-5" aria-hidden />
-      </div>
-      <div className="leading-tight">
-        <h1 className="text-base font-bold tracking-tight text-slate-100">
-          SIMRS <span className="text-emerald-400">SQL</span> Quest
-        </h1>
-        <p className="hidden text-[11px] text-slate-500 2xl:block">Latihan SQL ala sistem informasi rumah sakit</p>
-      </div>
+    <div className="flex items-center gap-1.5 lg:gap-2">
+      {onHome ? (
+        <button
+          type="button"
+          onClick={onHome}
+          aria-label="Beranda"
+          title="Kembali ke Beranda"
+          className="-m-1 flex items-center gap-2 rounded-xl p-1 transition hover:bg-slate-800/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300 lg:gap-2.5"
+        >
+          {mark}
+        </button>
+      ) : (
+        <div className="flex items-center gap-2 lg:gap-2.5">{mark}</div>
+      )}
+      <h1 className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-xs font-bold tracking-wide text-emerald-300">
+        <span className="sr-only">Jalur </span>SQL
+      </h1>
     </div>
   );
 }

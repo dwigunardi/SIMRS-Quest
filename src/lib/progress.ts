@@ -9,8 +9,10 @@ import type {
   UserProgress,
 } from '../types';
 import { getRank } from './ranks';
+import { readGuarded } from './storageGuard';
+import { PROGRESS_KEY } from './storageKeys';
 
-export const STORAGE_KEY = 'simrs-sql-quest:progress:v1';
+export const STORAGE_KEY = PROGRESS_KEY;
 export const HINT_PENALTY = 0.2;
 
 /* ------------------------------------------------------------------ */
@@ -108,15 +110,13 @@ function getStorage(): Storage | null {
   }
 }
 
+/**
+ * Progres tersimpan, atau progres kosong bila belum ada / tidak terbaca. Nilai yang ADA tetapi ditolak (JSON rusak,
+ * bentuk tidak dikenal) dikarantina lebih dulu (lib/storageGuard): progres kosong ini akan menimpa kunci aslinya pada
+ * penyimpanan berikutnya.
+ */
 export function loadProgress(): UserProgress {
-  try {
-    const raw = getStorage()?.getItem(STORAGE_KEY);
-    if (!raw) return createEmptyProgress();
-    const parsed: unknown = JSON.parse(raw);
-    return parseProgress(parsed) ?? createEmptyProgress();
-  } catch {
-    return createEmptyProgress();
-  }
+  return readGuarded(getStorage(), STORAGE_KEY, (raw) => parseProgress(JSON.parse(raw))) ?? createEmptyProgress();
 }
 
 export function saveProgress(progress: UserProgress): void {

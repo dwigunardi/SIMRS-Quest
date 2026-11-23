@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { isMistakeKind, type MistakeEvent, type MistakeKind } from '../lib/mistakes';
+import { browserStorage, readGuarded } from '../lib/storageGuard';
+import { MISTAKES_KEY } from '../lib/storageKeys';
 
 /**
  * Riwayat Peta Kelemahan, disimpan di browser terpisah dari progres XP (tanpa migrasi data progres):
@@ -8,7 +10,7 @@ import { isMistakeKind, type MistakeEvent, type MistakeKind } from '../lib/mista
  *   kesalahan saat latihan ulang bisa ditandai "teratasi" lagi setelah dijawab benar.
  * Disinkronkan antar-tab lewat event `storage`. localStorage bisa tidak tersedia → berlaku untuk sesi ini saja.
  */
-export const MISTAKES_STORAGE_KEY = 'simrs-sql-quest:mistakes:v1';
+export const MISTAKES_STORAGE_KEY = MISTAKES_KEY;
 const STORAGE_KEY = MISTAKES_STORAGE_KEY;
 const MAX_EVENTS = 1000;
 
@@ -44,18 +46,18 @@ export function parseMistakeLog(raw: string | null): MistakeLog {
   }
 }
 
-/** Isi storage terbaru, atau null bila storage tidak tersedia / belum pernah ditulis. */
-function readStored(): MistakeLog | null {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw === null ? null : parseMistakeLog(raw);
-  } catch {
-    return null;
-  }
+const isEmptyLog = (log: MistakeLog) => log.events.length === 0 && Object.keys(log.solved).length === 0;
+
+/**
+ * Isi storage terbaru, atau null bila storage tidak tersedia / belum pernah ditulis. Nilai yang ada tetapi tidak
+ * menghasilkan apa pun (JSON rusak, semua kejadian ditolak) dikarantina dulu — penyimpanan berikutnya menimpanya.
+ */
+export function readStoredMistakes(): MistakeLog | null {
+  return readGuarded(browserStorage(), STORAGE_KEY, parseMistakeLog, isEmptyLog);
 }
 
 function load(): MistakeLog {
-  return readStored() ?? EMPTY;
+  return readStoredMistakes() ?? EMPTY;
 }
 
 function save(log: MistakeLog): void {
@@ -91,7 +93,7 @@ export function useMistakes(): MistakesApi {
 
   /** Perbarui berdasarkan isi storage TERBARU (tab lain mungkin sudah menulis), simpan, lalu set state. */
   const update = useCallback((change: (latest: MistakeLog) => MistakeLog) => {
-    const next = change(readStored() ?? logRef.current);
+    const next = change(readStoredMistakes() ?? logRef.current);
     save(next);
     logRef.current = next;
     setLog(next);

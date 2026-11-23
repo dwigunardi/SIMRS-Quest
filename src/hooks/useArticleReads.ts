@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { browserStorage, readGuarded } from '../lib/storageGuard';
+import { ARTICLE_READS_KEY } from '../lib/storageKeys';
 
 /**
  * Daftar materi yang sudah dibuka, diingat di browser. Hanya untuk penanda "Konsep baru" — tidak memengaruhi XP.
  * Disinkronkan antar-tab lewat event `storage`. localStorage bisa tidak tersedia (mode privat) → berlaku untuk sesi ini saja.
  */
-export const ARTICLE_READS_STORAGE_KEY = 'simrs-sql-quest:materi-read:v1';
+export const ARTICLE_READS_STORAGE_KEY = ARTICLE_READS_KEY;
 const STORAGE_KEY = ARTICLE_READS_STORAGE_KEY;
 
 /** Baca daftar materi yang sudah dibuka dari teks JSON (juga dipakai impor cadangan). */
@@ -17,13 +19,9 @@ export function parseArticleReads(raw: string | null): ReadonlySet<string> {
   }
 }
 
-function readStored(): ReadonlySet<string> | null {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw === null ? null : parseArticleReads(raw);
-  } catch {
-    return null;
-  }
+/** Isi storage terbaru (null bila belum ada / storage tidak tersedia). Nilai yang ada tetapi tidak menyisakan satu id pun dikarantina dulu. */
+export function readStoredArticleReads(): ReadonlySet<string> | null {
+  return readGuarded(browserStorage(), STORAGE_KEY, parseArticleReads, (ids) => ids.size === 0);
 }
 
 function save(ids: ReadonlySet<string>): void {
@@ -41,7 +39,7 @@ export interface ArticleReads {
 }
 
 export function useArticleReads(): ArticleReads {
-  const [read, setRead] = useState<ReadonlySet<string>>(() => readStored() ?? new Set());
+  const [read, setRead] = useState<ReadonlySet<string>>(() => readStoredArticleReads() ?? new Set());
   const readRef = useRef(read);
   readRef.current = read;
 
@@ -55,7 +53,7 @@ export function useArticleReads(): ArticleReads {
 
   const markRead = useCallback((articleId: string) => {
     // Gabungkan dengan isi storage terbaru (tab lain mungkin sudah menandai materi lain).
-    const latest = readStored() ?? readRef.current;
+    const latest = readStoredArticleReads() ?? readRef.current;
     if (latest.has(articleId) && readRef.current.has(articleId)) return;
     const next = new Set(latest).add(articleId);
     save(next);

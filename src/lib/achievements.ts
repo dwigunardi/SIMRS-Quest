@@ -10,7 +10,7 @@ import { getMissionProgress } from './progress';
 import { MAX_BOX, REVIEW_INTERVALS, type ReviewDeck } from './review';
 import type { Mission, Tier, UserProgress } from '../types';
 
-export const ACHIEVEMENTS_SEEN_KEY = 'simrs-sql-quest:achievements-seen:v1';
+export { ACHIEVEMENTS_SEEN_KEY } from './storageKeys';
 
 export type AchievementCategory = 'Perjalanan' | 'Boss' | 'Ketepatan' | 'Konsistensi' | 'Ujian & Ulang' | 'Materi';
 

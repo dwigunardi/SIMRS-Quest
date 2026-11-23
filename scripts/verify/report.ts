@@ -33,6 +33,15 @@ export function guard(label: string, fn: () => void): void {
   }
 }
 
+/** Seperti guard, untuk blok pemeriksaan yang async (mis. menguji impor dinamis). */
+export async function guardAsync(label: string, fn: () => Promise<void>): Promise<void> {
+  try {
+    await fn();
+  } catch (error) {
+    fail(`${label}: exception — ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
 export function describeCheck(result: CheckResult): string {
   if (result.kind === 'wrong') return `wrong/${result.compare.reason ?? '-'}`;
   return result.kind;

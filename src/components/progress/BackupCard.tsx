@@ -1,23 +1,8 @@
 import { useRef, useState, type ChangeEvent } from 'react';
 import { Download, HardDriveDownload, Upload } from 'lucide-react';
-import { applyBackup, backupFileName, createBackup, parseBackup, summarize, type BackupStorage, type BackupSummary } from '../../lib/backup';
-
-function getStorage(): BackupStorage | null {
-  try {
-    return typeof localStorage === 'undefined' ? null : localStorage;
-  } catch {
-    return null;
-  }
-}
-
-function describe(s: BackupSummary): string {
-  return `${s.xp.toLocaleString('id-ID')} XP, ${s.completed} misi selesai, ${s.mistakes} catatan kesalahan, ${s.articlesRead} materi dibaca, ${s.exams} ujian`;
-}
-
-function formatDate(iso: string): string {
-  if (!iso) return 'tanggal tidak diketahui';
-  return new Date(iso).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
-}
+import { backupFileName, createBackup, summarize } from '../../lib/backup';
+import { STORAGE_BLOCKED_IMPORT, WRITE_FAILED_MESSAGE, describeSummary as describe, formatBackupDate as formatDate, readBackupFile, restoreBackup } from '../../lib/backupImport';
+import { browserStorage as getStorage } from '../../lib/storageGuard';
 
 type Status = { kind: 'error' | 'info'; text: string } | null;
 
@@ -51,25 +36,25 @@ export function BackupCard(): JSX.Element {
     if (!file) return;
     const storage = getStorage();
     if (!storage) {
-      setStatus({ kind: 'error', text: 'Browser ini tidak mengizinkan akses penyimpanan, jadi cadangan tidak bisa diimpor.' });
+      setStatus({ kind: 'error', text: STORAGE_BLOCKED_IMPORT });
       return;
     }
-    const parsed = parseBackup(await file.text());
+    // Validasi bersama dengan tautan "Pulihkan" di Beranda (lib/backupImport); file yang salah tidak mengubah apa pun.
+    const parsed = await readBackupFile(file, storage);
     if (!parsed.ok) {
       setStatus({ kind: 'error', text: parsed.error });
       return;
     }
-    const current = summarize(createBackup(storage, new Date()));
     const ok = window.confirm(
       `Impor cadangan dari ${formatDate(parsed.summary.exportedAt)}?\n\n` +
         `Cadangan: ${describe(parsed.summary)}.\n` +
-        `Saat ini: ${describe(current)}.\n\n` +
+        `Saat ini: ${describe(parsed.current)}.\n\n` +
         'Progres saat ini akan DIGANTI (tidak digabung), lalu halaman dimuat ulang. Ekspor dulu bila ingin menyimpan progres saat ini.',
     );
     if (!ok) return;
-    const written = applyBackup(storage, parsed.backup);
+    const written = restoreBackup(storage, parsed.backup);
     // Pesan di halaman akan hilang saat dimuat ulang, jadi kegagalan ditampilkan lewat alert.
-    if (!written) window.alert('Browser menolak menyimpan data (penyimpanan penuh atau diblokir). Progres mungkin hanya terimpor sebagian.');
+    if (!written) window.alert(WRITE_FAILED_MESSAGE);
     window.location.reload();
   };
 
