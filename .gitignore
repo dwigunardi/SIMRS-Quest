@@ -1,0 +1,7 @@
+node_modules
+dist
+*.local
+.DS_Store
+
+# Pengaturan lokal Claude Code (per mesin)
+.claude/settings.local.json

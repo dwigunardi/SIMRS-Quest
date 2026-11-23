@@ -1,0 +1,230 @@
+import { ChartColumn, ClipboardCheck, Flame, Hospital, Library, ListChecks, RotateCcw, Target, Terminal, Zap } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { getActiveStreak } from '../lib/progress';
+import type { AppMode, RankProgress, UserProgress } from '../types';
+
+export interface HeaderProps {
+  progress: UserProgress;
+  rankProgress: RankProgress;
+  completedCount: number;
+  totalCount: number;
+  mode: AppMode;
+  onModeChange: (mode: AppMode) => void;
+  onResetProgress: () => void;
+  /** Sisa waktu ujian yang sedang berjalan ("12:34" / "aktif"), ditampilkan di tombol Ujian; null = tidak ada ujian. */
+  examClock?: string | null;
+  /** Jumlah misi yang jatuh tempo untuk latihan ulang (ditampilkan bila tidak ada ujian berjalan). */
+  reviewDue?: number;
+}
+
+const RESET_CONFIRM =
+  'Reset semua progres? XP, streak, status misi, riwayat Peta Kelemahan, tanda materi yang sudah dibaca, riwayat ujian, dan jadwal latihan ulang akan dihapus permanen dari browser ini.';
+
+interface ModeOption {
+  mode: AppMode;
+  label: string;
+  /** Label ringkas untuk layar sempit. */
+  shortLabel?: string;
+  icon: typeof Target;
+}
+
+const MODE_OPTIONS: ModeOption[] = [
+  { mode: 'mission', label: 'Misi', icon: Target },
+  { mode: 'playground', label: 'Free Playground', shortLabel: 'Playground', icon: Terminal },
+  { mode: 'reference', label: 'Materi', icon: Library },
+  { mode: 'progress', label: 'Progres', icon: ChartColumn },
+  { mode: 'exam', label: 'Ujian', icon: ClipboardCheck },
+];
+
+export function Header({
+  progress,
+  rankProgress,
+  completedCount,
+  totalCount,
+  mode,
+  onModeChange,
+  onResetProgress,
+  examClock = null,
+  reviewDue = 0,
+}: HeaderProps) {
+  const handleReset = () => {
+    if (!window.confirm(RESET_CONFIRM)) return;
+    onResetProgress();
+  };
+  const activeStreak = getActiveStreak(progress.streak, new Date());
+
+  return (
+    <header className="shrink-0 border-b border-slate-800 bg-slate-900/80 backdrop-blur">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3">
+        <Logo />
+        <ModeSwitch mode={mode} onModeChange={onModeChange} examClock={examClock} reviewDue={reviewDue} />
+        <div className="ml-auto flex flex-wrap items-center gap-2 sm:gap-3">
+          <RankMeter rankProgress={rankProgress} xp={progress.xp} />
+          <StatPill
+            title={`Total XP: ${progress.xp}`}
+            className="border-amber-500/30 bg-amber-500/10 text-amber-300"
+          >
+            <Zap className="h-4 w-4" aria-hidden />
+            <span className="tabular-nums">{progress.xp}</span>
+            <span className="text-xs text-amber-400/70">XP</span>
+          </StatPill>
+          <StatPill
+            title={`Streak harian 🔥 — terbaik: ${progress.streak.best} hari`}
+            className={
+              activeStreak > 0
+                ? 'border-orange-500/30 bg-orange-500/10 text-orange-300'
+                : 'border-slate-700 bg-slate-800/60 text-slate-400'
+            }
+          >
+            <Flame className="h-4 w-4" aria-hidden />
+            <span className="tabular-nums">{activeStreak}</span>
+            <span className="text-xs opacity-70">hari</span>
+          </StatPill>
+          <StatPill
+            title="Misi selesai"
+            className="border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+          >
+            <ListChecks className="h-4 w-4" aria-hidden />
+            <span className="tabular-nums">
+              {completedCount}/{totalCount}
+            </span>
+          </StatPill>
+          <button
+            type="button"
+            onClick={handleReset}
+            title="Reset progres"
+            aria-label="Reset progres"
+            className="rounded-lg border border-slate-700 p-2 text-slate-400 transition hover:border-rose-500/50 hover:bg-rose-500/10 hover:text-rose-300"
+          >
+            <RotateCcw className="h-4 w-4" aria-hidden />
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function Logo() {
+  return (
+    <div className="flex items-center gap-2.5">
+      <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 text-slate-950 shadow-lg shadow-emerald-500/20">
+        <Hospital className="h-5 w-5" aria-hidden />
+      </div>
+      <div className="leading-tight">
+        <h1 className="text-base font-bold tracking-tight text-slate-100">
+          SIMRS <span className="text-emerald-400">SQL</span> Quest
+        </h1>
+        <p className="hidden text-[11px] text-slate-500 2xl:block">Latihan SQL ala sistem informasi rumah sakit</p>
+      </div>
+    </div>
+  );
+}
+
+interface ModeSwitchProps {
+  mode: AppMode;
+  onModeChange: (mode: AppMode) => void;
+  examClock: string | null;
+  reviewDue: number;
+}
+
+function ModeSwitch({ mode, onModeChange, examClock, reviewDue }: ModeSwitchProps) {
+  return (
+    <div className="flex rounded-lg border border-slate-800 bg-slate-950/60 p-1" role="group" aria-label="Mode aplikasi">
+      {MODE_OPTIONS.map((option) => {
+        const active = option.mode === mode;
+        const Icon = option.icon;
+        return (
+          <button
+            key={option.mode}
+            type="button"
+            aria-pressed={active}
+            onClick={() => onModeChange(option.mode)}
+            title={option.label}
+            className={`flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm font-medium transition sm:px-3 ${
+              active
+                ? 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/40'
+                : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+            }`}
+          >
+            <Icon className="h-4 w-4" aria-hidden />
+            {/* Layar sempit: ikon saja; layar sedang: label ringkas; layar sangat lebar: label lengkap
+                (nama lengkap tetap terbaca screen reader & tooltip). */}
+            <span aria-hidden className="hidden sm:inline 2xl:hidden">
+              {option.shortLabel ?? option.label}
+            </span>
+            <span className="sr-only 2xl:not-sr-only">{option.label}</span>
+            {option.mode === 'exam' && examClock ? (
+              <span className="rounded bg-amber-500/20 px-1.5 py-px font-mono text-[11px] tabular-nums text-amber-200" data-testid="header-exam-clock">
+                <span className="sr-only">ujian berjalan, sisa waktu </span>
+                {examClock}
+              </span>
+            ) : null}
+            {option.mode === 'exam' && !examClock && reviewDue > 0 ? (
+              <span className="grid h-5 min-w-5 place-items-center rounded-full bg-sky-500 px-1 text-[11px] font-bold tabular-nums text-slate-950" data-testid="header-review-due">
+                <span className="sr-only">latihan ulang jatuh tempo: </span>
+                {reviewDue}
+              </span>
+            ) : null}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+interface RankMeterProps {
+  rankProgress: RankProgress;
+  xp: number;
+}
+
+function RankMeter({ rankProgress, xp }: RankMeterProps) {
+  const { current, next, ratio, xpToNext } = rankProgress;
+  const percent = Math.round(Math.min(Math.max(ratio, 0), 1) * 100);
+  const caption = next ? `${xpToNext} XP lagi menuju ${next.title}` : 'Rank tertinggi tercapai!';
+
+  return (
+    <div
+      className="flex min-w-[180px] items-center gap-2 rounded-lg border border-slate-800 bg-slate-950/60 px-2.5 py-1.5"
+      title={`${current.title} • ${xp} XP • ${caption}`}
+    >
+      <span className="text-lg leading-none" aria-hidden>
+        {current.icon}
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="truncate text-xs font-semibold text-slate-200">{current.title}</span>
+          <span className="shrink-0 text-[10px] tabular-nums text-slate-500">{percent}%</span>
+        </div>
+        <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-800">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-amber-400 to-emerald-400 transition-[width] duration-700"
+            style={{ width: `${percent}%` }}
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={percent}
+            aria-label={caption}
+          />
+        </div>
+        <p className="mt-0.5 truncate text-[10px] text-slate-500">{caption}</p>
+      </div>
+    </div>
+  );
+}
+
+interface StatPillProps {
+  title: string;
+  className: string;
+  children: ReactNode;
+}
+
+function StatPill({ title, className, children }: StatPillProps) {
+  return (
+    <div
+      title={title}
+      className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-sm font-semibold ${className}`}
+    >
+      {children}
+    </div>
+  );
+}
