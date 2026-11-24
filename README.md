@@ -1,13 +1,137 @@
-# SIMRS SQL Quest 🏥
+# SIMRS Quest 🏥
 
-Aplikasi web untuk latihan SQL dengan gaya permainan, bertema **Sistem Informasi Manajemen Rumah Sakit (SIMRS)**.
-Tata letaknya meniru SQLBolt: layar terbagi dua, soal di kiri dan editor serta hasil di kanan.
+Aplikasi web untuk belajar ngoding dengan gaya permainan, bertema **Sistem Informasi Manajemen Rumah Sakit (SIMRS)**
+(paket npm: `simrs-quest`). Aplikasi dibuka di **Beranda** — landing satu halaman — lalu masuk ke sebuah **jalur**
+belajar. Jalur yang sudah tersedia adalah **SQL**; jalur JavaScript & TypeScript, REST API, React, dan
+NestJS · Next.js · Laravel sudah terdaftar tetapi berstatus *Segera* (belum ada tanggalnya).
+
+Tata letak jalur SQL meniru SQLBolt: layar terbagi dua, soal di kiri dan editor serta hasil di kanan.
 Progresnya mengikuti gaya Duolingo: ada XP, rank, streak harian, dan misi yang terbuka satu per satu.
 
 Semua berjalan **100% di browser** memakai SQLite 3.54 (WebAssembly lewat [sql.js](https://sql.js.org)).
-Tidak perlu server atau database eksternal, dan tidak ada data yang dikirim ke mana pun.
+Tidak perlu server, database eksternal, atau akun, dan tidak ada data yang dikirim ke mana pun.
+
+## Beranda & platform
+
+### Rute
+
+Router-nya berbasis hash dan dibuat sendiri (`src/platform/router.ts`):
+
+| Alamat | Layar |
+|---|---|
+| tanpa hash, `#`, `#/` | Beranda |
+| `#/sql` | Jalur SQL (membuka misi "Lanjutkan") |
+| `#/sql/misi`, `#/sql/materi`, `#/sql/playground`, `#/sql/progres`, `#/sql/ujian` | Tautan masuk ke sebuah mode jalur SQL; setelah modenya terbuka, URL dirapikan kembali ke `#/sql` |
+| `#/js`, `#/rest`, `#/react`, `#/framework`, alamat lain | Dialihkan ke Beranda dengan pemberitahuan satu baris (jalur belum tersedia / halaman tidak ditemukan) |
+
+Beranda → jalur dan jalur → Beranda adalah entri riwayat baru, jadi tombol Kembali/Maju browser bekerja dua arah;
+pengalihan dan perapian URL memakai *replace* sehingga tidak menjebak tombol Kembali. Beranda mengingat posisi gulirnya
+per entri riwayat: kembali lewat tombol Kembali memulihkan posisi terakhir, sedangkan navigasi biasa mulai dari atas.
+
+**Satu jalur hangat** (`src/platform/PlatformShell.tsx`): jalur yang pernah dibuka tetap ter-mount saat pengguna pulang
+ke Beranda — hanya disembunyikan. Draf editor, sesi Playground, dan timer ujian tetap hidup; ujian yang waktunya habis
+terkumpul sendiri walau pengguna sedang di Beranda, dan mesin SQL tidak dimuat ulang saat "Lanjutkan" ditekan.
+
+### Beranda (landing)
+
+Beranda (`src/platform/Home.tsx` + `src/platform/landing/`) **ringan**: tidak memuat sql.js/`.wasm` dan tidak mengimpor
+data misi secara statis. Ringkasan progres diambil lewat impor dinamis (`src/tracks/sql/glance.ts`) yang hanya membaca
+`localStorage`; bagian di bawah lipatan dimuat malas sebagai satu chunk (bila gagal diunduh, tampil pesan dengan tombol
+*Coba muat lagi*); bola dunia (cobe) baru dimuat saat terlihat dan confetti saat pertama dipakai.
+
+Isinya, dari atas ke bawah:
+
+1. **Navbar** — menu Jalur / Fitur / Tentang, tombol utama, tombol **jeda animasi**, dan tombol tema.
+2. **Hero** — "Belajar [kata berganti] gratis", angka kurikulum, bola dunia dengan penanda kota asal pasien pada data
+   latihan, dan maskot **Kapi**. Pengguna baru melihat "Mulai belajar"; pengguna lama melihat "Lanjutkan" + misi yang akan
+   dibuka, lalu kartu **Hari ini** (pangkat, XP, bilah kemajuan, ujian yang masih berjalan dengan jam mundur, latihan
+   ulang jatuh tempo, saran Peta Kelemahan, streak). "Pulihkan" memulihkan progres dari file cadangan langsung dari Beranda.
+3. **Pita berjalan** — topik SQL yang sudah ada dan teknologi jalur berikutnya (bertanda *Segera*).
+4. **Peta jalur** — tab kelima jalur dan peta zig-zag 10 tier SQL. Untuk pengguna lama garis hijaunya berhenti di tier
+   tempat misi "Lanjutkan" berada, dan tier sebelumnya diberi centang.
+5. **Jelajahi 72 misi** — peta mini: satu kotak per misi, belah ketupat = Boss.
+6. **Belajar sambil praktik** — peragaan lima jenis latihan (Query, Perbaiki Query, Tebak Hasil, Lab Injection,
+   Playground) dengan misi sungguhan dari kurikulum. Peragaan ini tidak menjalankan SQL.
+7. **Contoh keluaran** — korsel angka hasil query di database latihan.
+8. **Naik pangkat** — tiga dari delapan pangkat.
+9. **Setiap pelajaran berarti** — Streak, Pangkat, Misi & Boss, Lencana, Ujian, Latihan ulang, Peta Kelemahan.
+10. **Macet?** — tab Perbedaan, hint bertahap, Show Solution, Peta Kelemahan.
+11. **Belajar di layar mana pun**, 12. **FAQ**, 13. **CTA penutup**, 14. **Footer**.
+
+**Isinya dijaga benar.** Semua teks dan angka landing berada di satu berkas (`src/platform/landing/lib/content.ts`), dan
+`npm run verify` mencocokkannya dengan aplikasi: jumlah misi/tier/boss/materi/lencana/pangkat, XP, tabel & kota di
+database latihan, contoh misi di peragaan (query, hasil, hint, perbedaan), label yang dikutip dari layar jalur, dan
+daftar kata yang tidak boleh muncul karena fiturnya tidak ada. Peragaan yang bukan tiruan layar diberi keterangan —
+mis. kalender di panel Streak hanya ilustrasi (aplikasi menyimpan angka streak, bukan riwayat per hari).
+
+**Tema terang/gelap** hanya milik Beranda: atribut `data-theme` pada `<html>` menukar variabel CSS
+(`src/platform/landing/styles/tokens.css`, kelas Tailwind berawalan `q-`). Pilihan disimpan di `localStorage`
+(`simrs-quest:theme:v1`); sebelum pernah memilih, tema mengikuti `prefers-color-scheme`. Layar jalur selalu gelap, dan
+atribut tema dilepas begitu Beranda ditinggalkan. Kontras tiap pasangan warna dihitung (WCAG AA) di `npm run verify`.
+
+**Gerak**: animasi memakai framer-motion dan menghormati `prefers-reduced-motion`. Tombol jeda di navbar menghentikan
+semua gerak yang berjalan sendiri (pita, kata berganti, bola dunia, maskot) tanpa bergantung pada pengaturan sistem, dan
+gerak berulang berhenti sendiri saat berada di luar layar — halaman yang tidak sedang menganimasikan apa pun tidak
+meminta satu frame pun.
+
+### Keamanan data pengguna
+
+- **Karantina** (`src/lib/storageGuard.ts`): bila nilai di `localStorage` ada tetapi tidak terbaca (JSON terpotong, bentuk
+  ditolak), salinan mentahnya disimpan di `<kunci>:karantina` (maks. 3 salinan) sebelum aplikasi lanjut dengan data
+  kosong — nilai aslinya tidak pernah dihapus diam-diam. Beranda menjalankan penjagaan ini saat dibuka dan menampilkan
+  peringatan dengan tombol *Pulihkan dari file cadangan*.
+- **Fixture emas** (`scripts/fixtures/storage-v1.json`, `backup-format1.json`): data pengguna versi 1 yang dibekukan.
+  `npm run verify` memastikan setiap parser masih membacanya tanpa kehilangan data dan nama kunci tidak berubah. Bila
+  bagian ini merah, perbaiki kodenya — jangan menyunting fixture.
+- **Port dev tetap**: progres tersimpan per *origin*, dan `npm run dev` selalu memakai `http://localhost:5173`
+  (`strictPort`; bila port itu terpakai, Vite berhenti dengan pesan jelas alih-alih pindah diam-diam ke port lain
+  sehingga progres tampak "hilang"). Untuk mencoba-coba **tanpa menyentuh progres asli**, jalankan di port lain —
+  origin lain berarti `localStorage` yang terpisah:
+
+  ```bash
+  npm run dev -- --port 5199
+  ```
+
+### Kunci localStorage
+
+Semua kunci didefinisikan di `src/lib/storageKeys.ts`.
+
+| Kunci | Isi |
+|---|---|
+| `simrs-sql-quest:progress:v1` | Progres jalur SQL: XP, streak, status tiap misi, misi terakhir |
+| `simrs-sql-quest:mistakes:v1` | Riwayat Peta Kelemahan |
+| `simrs-sql-quest:materi-read:v1` | Materi yang sudah dibuka |
+| `simrs-sql-quest:exam-session:v1`, `simrs-sql-quest:exams:v1` | Sesi ujian/latihan yang berjalan, dan riwayatnya |
+| `simrs-sql-quest:review:v1` | Jadwal latihan ulang |
+| `simrs-sql-quest:achievements-seen:v1`, `simrs-sql-quest:brief-fold:v1` | Lencana yang sudah diumumkan; pilihan lipat Skenario & Tugas |
+| `<kunci>:karantina` | Salinan nilai yang tidak terbaca (lihat di atas) |
+| `simrs-quest:home-intro:v1` | Catatan sekali tampil di Beranda sudah dilihat |
+| `simrs-quest:quarantine-ack:v1` | Peringatan karantina terakhir yang sudah ditutup |
+| `simrs-quest:theme:v1` | Tema Beranda (`light` / `dark`) |
+
+Awalan `simrs-sql-quest:` adalah nama produk lama dan sengaja dibiarkan: mengganti satu huruf saja berarti progres
+pengguna yang sudah ada "hilang".
+
+### Library
+
+| Library | Dipakai untuk |
+|---|---|
+| `react`, `react-dom`, `vite`, `typescript`, `tailwindcss` 3.4 | Dasar aplikasi |
+| `sql.js` | SQLite (WebAssembly) untuk jalur SQL — tidak dimuat di Beranda |
+| `lucide-react` | Ikon |
+| `framer-motion` | Animasi Beranda (muncul saat terlihat, indikator tab, parallax, angka hitung-naik) |
+| `@radix-ui/react-accordion`, `-tabs`, `-navigation-menu`, `-dialog` | FAQ, tab, menu navbar, dan menu geser layar sempit yang bisa dipakai dengan keyboard |
+| `embla-carousel-react`, `embla-carousel-autoplay` | Korsel contoh keluaran |
+| `cobe` | Bola dunia hero (dimuat malas) |
+| `canvas-confetti` | Confetti kecil saat peragaan dinilai benar (dimuat malas) |
+| `@icons-pack/react-simple-icons` | Logo teknologi jalur berikutnya di pita berjalan |
+| `clsx`, `tailwind-merge`, `class-variance-authority` | Penyusun kelas komponen Beranda |
+| `@fontsource/inter`, `-jetbrains-mono`, `-varela-round`, `-orbitron` | Font yang disajikan dari origin sendiri (tanpa Google Fonts): Inter & JetBrains Mono untuk layar jalur, Varela Round & Orbitron untuk Beranda |
 
 ## Fitur
+
+Bagian ini menjelaskan isi **jalur SQL**.
+
 
 - **72 misi dalam 10 tier**, dari `SELECT` pertama sampai window function, transaksi, optimasi index, lab SQL injection,
   kartu konsep, **desain tabel (DDL)**, serta **fungsi tanggal, teks & JSON (FHIR/SATUSEHAT)**, masing-masing ditutup **Boss Challenge** (lihat [Kurikulum](#kurikulum)).
@@ -179,7 +303,7 @@ Tidak perlu server atau database eksternal, dan tidak ada data yang dikirim ke m
   - Bila browser tidak mendukung worker / worker gagal dimuat, aplikasi otomatis kembali ke eksekusi langsung.
 - **Schema Explorer**: tabel, jumlah baris, kolom (PK, FK, NOT NULL), daftar index, contoh 5 baris, dan relasi antar tabel
   (termasuk relasi ke tabel sendiri pada `struktur_organisasi`).
-- **Progres tersimpan** di `localStorage` browser (kunci `simrs-sql-quest:progress:v1`).
+- **Progres tersimpan** di `localStorage` browser (lihat [Kunci localStorage](#kunci-localstorage)).
 - **Responsif**: dua kolom di layar lebar (± 40% / 60%), bertumpuk di ponsel.
 
 ## Cara menjalankan
@@ -191,7 +315,8 @@ npm install
 npm run dev
 ```
 
-Lalu buka alamat yang tampil di terminal (biasanya http://localhost:5173).
+Lalu buka http://localhost:5173. Port ini tetap (lihat [Keamanan data pengguna](#keamanan-data-pengguna)); untuk mencoba
+tanpa menyentuh progres yang sudah ada, pakai `npm run dev -- --port 5199`.
 
 Untuk build produksi:
 
@@ -344,7 +469,7 @@ punya hint; Show Solution baru aktif setelah 3 percobaan.
 | `npm run build` | `tsc --noEmit`, lalu `vite build` ke `dist/`. |
 | `npm run preview` | Menyajikan hasil build. |
 | `npm run typecheck` | Pemeriksaan tipe TypeScript (strict) tanpa build. |
-| `npm run verify` | Verifikasi seluruh kurikulum di Node (lihat di bawah). |
+| `npm run verify` | Verifikasi seluruh kurikulum, platform, dan isi Beranda di Node (lihat di bawah). |
 | `npm run e2e` | Uji end-to-end di Chrome/Edge sungguhan, headless (lihat [Uji E2E](#uji-e2e-di-browser)). Tambahkan `-- --preview` untuk menguji build produksi, atau `-- --only=boss,backup` untuk suite tertentu. |
 
 `npm run verify` (`scripts/verify-missions.ts` + modul `scripts/verify/`) memeriksa:
@@ -431,6 +556,22 @@ punya hint; Show Solution baru aktif setelah 3 percobaan.
   dipakai, bertahan antar-permintaan, dan hilang setelah reset.
 - **Autocomplete** (`sqlComplete.ts`): konteks tabel/kolom/alias/CTE, kualifier `alias.`, prioritas kolom tabel yang disebut,
   diam di dalam string/komentar, fungsi disisipkan dengan `()`.
+- **Fixture emas** (`fixtures.ts`): nama kunci storage tidak berubah, setiap parser membaca `scripts/fixtures/storage-v1.json`
+  tanpa kehilangan data, file cadangan format 1 masih diterima dan memulihkan storage yang sama, dan ringkasan Beranda
+  dari fixture itu memberi angka yang ditetapkan.
+- **Platform** (`platform.ts`): router (hash apa pun → rute, tanpa melempar; bentuk kanonik), registri jalur (yang tersedia
+  wajib punya `load` & `glance`, yang *segera* tidak), karantina (salinan mentah, maks. 3, tidak pernah melempar), aturan
+  "Lanjutkan", ringkasan Beranda untuk storage kosong/rusak/diblokir (hanya membaca), penjaga data yang dijalankan Beranda
+  (mengkarantina setiap kunci yang dijaga tanpa mengubah kunci aslinya), dan **bundel awal tetap ringan**: berkas yang
+  terjangkau secara statis dari `src/main.tsx` tidak boleh memuat data misi, sql.js, cobe, atau canvas-confetti.
+- **Landing** (`landing.ts`): angka di `content.ts` sama dengan kurikulum; tabel, jumlah baris, kota pasien, dan cuplikan
+  tabel sama dengan hasil seed; daftar jalur & tautan cocok dengan registri dan router; contoh misi di peragaan dihitung
+  ulang (query, hasil, hint pertama/kedua, baris bug, tab Perbedaan, jenis kesalahan); klaim tentang Boss, Mode Ujian,
+  dan pangkat diuji terhadap aturan aplikasi; **label yang dikutip** (nama tab pembanding, judul sukses, nama mode, tombol
+  cadangan, alat Playground) dicocokkan dengan komponennya; **kata terlarang** dicari di `content.ts` dan semua berkas
+  landing (hal yang tidak ada di aplikasi: akun, toko aplikasi, papan peringkat, asisten AI, testimoni, dan sejenisnya);
+  **kontras** tiap pasangan token warna lolos WCAG AA di tema terang dan gelap; dan berkas landing tidak memakai varian
+  `dark:` Tailwind.
 
 ### Uji E2E di browser
 
@@ -441,6 +582,7 @@ terpasang (lokasi lain: set `CHROME_PATH`). Server, browser, dan folder sementar
 
 | Suite | Yang diuji |
 |---|---|
+| `home` | Beranda & shell platform: Beranda bersih (satu h1, tanpa `.wasm`, tanpa gulir horizontal di 1400/390/320 px, tombol utama tidak mencuri fokus pengunjung baru sehingga Spasi tetap menggulir), masuk jalur lalu pulang dengan jalur tetap hangat (draf editor, Back/Forward), ringkasan pengguna lama (kartu "Hari ini" di lipatan pertama dengan pangkat, XP, dan bilah kemajuan; Enter melanjutkan) & catatan sekali tampil, peta jalur yang garis hijaunya berhenti di tier saat ini, latihan ulang jatuh tempo dan tautan masuk `#/sql/…`, ujian berjalan (jam mundur, kumpul otomatis di balik Beranda, "Waktu habis"), pengalihan rute tak dikenal (pemberitahuan terlihat walau halaman sedang digulir), karantina progres rusak sejak Beranda dibuka, pulihkan cadangan lewat pemilih file asli, tema terang/gelap (layar jalur tetap gelap), interaksi landing (tab, FAQ dengan keyboard, Hint & Run & Check pada peragaan, korsel, menu navbar, menu layar sempit), gerak (tombol jeda, gerak dikurangi saat halaman terbuka maupun sejak muat awal, halaman tidak meminta frame saat diam), posisi gulir yang pulih lewat tombol Kembali, keadaan semua misi tuntas, serta dua kegagalan unduhan (ringkasan progres, bagian bawah halaman + coba lagi) |
 | `worker` | Penilaian lewat Web Worker, batas 100.000 baris, halaman tetap responsif saat query macet, batas waktu 8 detik, tombol Hentikan, worker dibuat ulang, Playground (salinan DB sesi, INSERT sungguhan, transaksi terbuka), Urutan Eksekusi pada query macet |
 | `boss` | Boss terkunci sampai semua misi tier selesai, tanpa hint, Show Solution terkunci 3 percobaan, tier berikutnya tetap terbuka, pesan di tab Materi, perayaan "Boss dikalahkan" dengan XP penuh |
 | `backup` | Ekspor mengunduh file berisi progres/kesalahan/materi, impor di browser kosong memulihkan semuanya, file yang salah ditolak tanpa mengubah progres |
@@ -456,16 +598,38 @@ Setiap suite juga gagal bila ada error JavaScript atau `console.error`/`warn` di
 ## Struktur folder
 
 ```
-├── index.html
+├── index.html                    # termasuk skrip kecil pemasang tema Beranda sebelum gambar pertama
 ├── scripts/
 │   ├── verify-missions.ts        # npm run verify (entry point)
 │   ├── verify/                   # report, curriculum, sqlMissions, labMissions, predictMissions, testCases,
 │   │                             # planTree, resultDiff, execSteps, sqlComplete, materi, weakness, worker, backup, exam,
-│   │                             # review, achievements, perfLab
+│   │                             # review, achievements, perfLab, fixtures, platform, landing, memoryStorage
+│   ├── fixtures/                 # fixture emas: storage-v1.json, backup-format1.json (JANGAN disunting)
 │   ├── test-cases/               # kasus uji per tier: tier1-3.ts, tier4.ts … tier10.ts, bosses.ts, index.ts, types.ts
 │   └── e2e/                      # npm run e2e: run (entry), server (Vite), browser (CDP), context (helper), suites/
 └── src/
-    ├── main.tsx / App.tsx        # entry React & shell (mode, misi aktif, wiring)
+    ├── main.tsx                  # entry React → platform/PlatformShell
+    ├── fonts.css / index.css     # font lokal (@fontsource) & gaya dasar layar jalur
+    ├── platform/                 # lapisan platform (ringan; tanpa data misi & mesin SQL)
+    │   ├── router.ts             # router hash: parseRoute, formatRoute, navigate, useRoute
+    │   ├── PlatformShell.tsx     # rute → layar; "satu jalur hangat"; pengalihan + pemberitahuan
+    │   ├── tracks.ts             # registri jalur + kontrak TrackProps / TrackGlance / GlanceFn / GuardFn
+    │   ├── Home.tsx              # Beranda: ringkasan, pemberitahuan, pulihkan cadangan, posisi gulir, bagian bawah malas
+    │   ├── home/                 # useTrackGlance (ringkasan + penjaga data), useBackupRestore
+    │   ├── brand.ts / BrandMark.tsx / screens.tsx   # nama produk, logo, layar pemuatan & galat platform
+    │   └── landing/
+    │       ├── LandingBelow.tsx  # bagian 4–13 (satu chunk malas)
+    │       ├── lib/              # content.ts (SEMUA teks & angka), motion.ts, scroll.ts, cn.ts
+    │       ├── sections/         # Navbar, Hero, TodayStrip, CategoryMarquee, Roadmap, CatalogStrip, PracticeSection,
+    │       │                     # ShowcaseSection, Ranks, Gamification, MascotHint, Devices, FAQ, FinalCTA, Footer,
+    │       │                     # Notices, RestorePanel
+    │       ├── ui/               # LandingRoot, Section, Button3D, Pill, Card, Tabs, Accordion, NavDropdown, MobileMenu,
+    │       │                     # CodeWindow, Mockups, Reveal, CountUp, ThemeToggle, Icon
+    │       ├── illustrations/    # Mascot (Kapi), Globe, FloatingBits, Wave, confetti
+    │       ├── hooks/            # useTheme, usePrefersReducedMotion (+ jeda animasi), useCountUp, useTypewriter
+    │       └── styles/           # tokens.css (variabel warna terang/gelap), landing.css, fonts.css
+    ├── tracks/sql/               # SqlTrack.tsx (pembungkus jalur SQL), glance.ts (ringkasan & penjaga data untuk Beranda)
+    ├── App.tsx                   # layar jalur SQL (mode, misi aktif, wiring)
     ├── types.ts                  # kontrak tipe bersama (Mission = SqlMission | InjectionMission | ConceptMission | PredictMission)
     ├── db/seed.ts                # SCHEMA_SQL, SEED_SQL, TABLE_ORDER, TABLE_DESCRIPTIONS
     ├── data/missions/
@@ -504,6 +668,10 @@ Setiap suite juga gagal bila ada error JavaScript atau `console.error`/`warn` di
     │   ├── mistakes.ts           # klasifikasi jenis kesalahan (Peta Kelemahan)
     │   ├── weakness.ts           # laporan Peta Kelemahan: bobot, kategori, topik, rekomendasi
     │   ├── progress.ts / ranks.ts# XP, unlock, streak, rank
+    │   ├── resume.ts             # misi yang dibuka "Lanjutkan" (dipakai jalur dan ringkasan Beranda)
+    │   ├── storageKeys.ts        # SEMUA kunci localStorage (jalur SQL + platform)
+    │   ├── storageGuard.ts       # karantina nilai tersimpan yang tidak terbaca; browserStorage
+    │   ├── backupImport.ts       # baca & terapkan file cadangan (dipakai Beranda lewat impor dinamis)
     │   ├── sqlHighlight.ts       # tokenizer lossless untuk highlighting
     │   └── sqlLoader.ts / platform.ts
     ├── workers/                  # sqlWorker (entry Web Worker), handleRequest (logika, bisa diuji), protocol

@@ -6,15 +6,14 @@ import { MISSIONS } from '../data/missions';
 import type { ExamItemStatus } from '../lib/exam';
 import { toLocalDateKey } from '../lib/progress';
 import { REVIEW_KEY, parseDeck, updateDeck, type ReviewDeck } from '../lib/review';
+import { browserStorage, readGuarded } from '../lib/storageGuard';
 import type { UserProgress } from '../types';
 
-function readDeck(): ReviewDeck {
-  try {
-    const raw = window.localStorage.getItem(REVIEW_KEY);
-    return raw === null ? {} : parseDeck(JSON.parse(raw));
-  } catch {
-    return {};
-  }
+const isEmptyDeck = (deck: ReviewDeck) => Object.keys(deck).length === 0;
+
+/** Deck tersimpan ({} bila belum ada / tidak terbaca). Nilai yang ada tetapi tidak menyisakan satu kartu pun dikarantina dulu. */
+export function readStoredDeck(): ReviewDeck {
+  return readGuarded(browserStorage(), REVIEW_KEY, (raw) => parseDeck(JSON.parse(raw)), isEmptyDeck) ?? {};
 }
 
 function saveDeck(deck: ReviewDeck): void {
@@ -33,13 +32,13 @@ export interface ReviewDeckApi {
 }
 
 export function useReviewDeck(): ReviewDeckApi {
-  const [deck, setDeck] = useState<ReviewDeck>(readDeck);
+  const [deck, setDeck] = useState<ReviewDeck>(readStoredDeck);
   const deckRef = useRef(deck);
   deckRef.current = deck;
 
   useEffect(() => {
     const onStorage = (event: StorageEvent) => {
-      if (event.key === REVIEW_KEY || event.key === null) setDeck(readDeck());
+      if (event.key === REVIEW_KEY || event.key === null) setDeck(readStoredDeck());
     };
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);

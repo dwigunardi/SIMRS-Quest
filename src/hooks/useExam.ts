@@ -29,6 +29,7 @@ import {
 import { buildPredictChoices } from '../lib/predict';
 import { sqlGuard } from '../lib/sqlGuard';
 import { stoppedFailure } from '../lib/sqlEngine';
+import { browserStorage, readGuarded } from '../lib/storageGuard';
 import { checkMission } from '../lib/validator';
 import type { CheckResult, UserProgress } from '../types';
 import type { MistakesApi } from './useMistakes';
@@ -41,6 +42,15 @@ function readJson(key: string): unknown {
   } catch {
     return null;
   }
+}
+
+/**
+ * Riwayat ujian tersimpan ([] bila belum ada / tidak terbaca). Nilai yang ada tetapi tidak menyisakan satu entri pun
+ * dikarantina dulu. Sesi berjalan sengaja TIDAK dijaga: sesi yang kedaluwarsa atau memuat misi yang sudah tidak ada
+ * memang dibuang, itu bukan kerusakan.
+ */
+export function readStoredHistory(): ExamRecord[] {
+  return readGuarded(browserStorage(), EXAM_HISTORY_KEY, (raw) => parseHistory(JSON.parse(raw)), (records) => records.length === 0) ?? [];
 }
 
 function writeJson(key: string, value: unknown): void {
@@ -115,7 +125,7 @@ export function useExam(
   const onFinishedRef = useRef(onFinished);
   onFinishedRef.current = onFinished;
   const [session, setSession] = useState<ExamSession | null>(() => parseSession(readJson(EXAM_SESSION_KEY), MISSIONS));
-  const [history, setHistory] = useState<ExamRecord[]>(() => parseHistory(readJson(EXAM_HISTORY_KEY)));
+  const [history, setHistory] = useState<ExamRecord[]>(readStoredHistory);
   const [reportId, setReportId] = useState<string | null>(null);
   const [current, setCurrent] = useState(0);
   const [now, setNow] = useState(() => Date.now());

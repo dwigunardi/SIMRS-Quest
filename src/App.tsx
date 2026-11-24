@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useArticleReads } from './hooks/useArticleReads';
 import { useMistakes } from './hooks/useMistakes';
 import { useCompletionSchema } from './hooks/useCompletionSchema';
@@ -39,44 +39,40 @@ import { formatClock, isExamMission } from './lib/exam';
 import { WeaknessView } from './components/progress/WeaknessView';
 import { ARTICLES } from './data/materi';
 import { buildWeaknessReport } from './lib/weakness';
-import type { AppMode, LeftTab, Mission, UserProgress } from './types';
+import { findPendingMission, pickInitialMissionId, requireFirstMission } from './lib/resume';
+import type { AppMode, LeftTab } from './types';
 
 const HINT_CONFIRM = 'Membuka hint akan mengurangi 20% XP misi ini. Lanjutkan?';
 const SOLUTION_CONFIRM = 'Melihat solusi membuat misi ini bernilai 0 XP. Lanjutkan?';
 const DEFAULT_PLAYGROUND_SQL =
   '-- Free Playground: bebas bereksperimen dengan database SIMRS\nSELECT no_rm, nama, kota, penjamin\nFROM pasien\nLIMIT 10;';
 
-function requireFirstMission(): Mission {
-  const first = [...MISSIONS].sort((a, b) => a.order - b.order)[0];
-  if (!first) throw new Error('Data misi kosong: MISSIONS harus berisi minimal satu misi.');
-  return first;
-}
+const FIRST_MISSION = requireFirstMission(MISSIONS);
 
-const FIRST_MISSION = requireFirstMission();
-
-/**
- * Misi awal: lastMissionId (jika masih terbuka) → misi terbuka pertama yang belum selesai → misi pertama.
- * Kartu konsep selalu terbuka, jadi diabaikan saat mencari misi "berikutnya" agar user tidak
- * dilempar ke Tier 8 hanya karena kartunya belum dibaca.
- */
-function pickInitialMissionId(progress: UserProgress): string {
-  const last = progress.lastMissionId;
-  if (last && getMissionById(last) && isMissionUnlocked(MISSIONS, progress, last)) return last;
-  return findPendingMission(progress)?.id ?? FIRST_MISSION.id;
-}
+/** Segmen URL setelah '#/sql' → mode yang dibuka ("niat masuk" dari Beranda atau tautan langsung). */
+const ENTRY_MODES: ReadonlyMap<string, AppMode> = new Map<string, AppMode>([
+  ['misi', 'mission'],
+  ['materi', 'reference'],
+  ['playground', 'playground'],
+  ['progres', 'progress'],
+  ['ujian', 'exam'],
+]);
+const NO_ENTRY: readonly string[] = [];
 
 /**
- * Misi terbuka pertama (menurut order) yang belum selesai, selain `excludeId`; misi non-konsep didahulukan.
- * undefined berarti semua misi sudah selesai (misi terkunci selalu didahului misi terbuka yang belum selesai).
+ * Props dari platform (src/tracks/sql/SqlTrack.tsx). Semuanya opsional supaya App tetap bisa dirender berdiri sendiri.
+ * Bentuknya sama dengan TrackProps di platform/tracks.
  */
-function findPendingMission(progress: UserProgress, excludeId?: string): Mission | undefined {
-  const sorted = [...MISSIONS].sort((a, b) => a.order - b.order);
-  const isPending = (m: Mission) =>
-    m.id !== excludeId && !getMissionProgress(progress, m.id).completed && isMissionUnlocked(MISSIONS, progress, m.id);
-  return sorted.find((m) => m.kind !== 'concept' && isPending(m)) ?? sorted.find(isPending);
+export interface AppProps {
+  /** false = pengguna sedang di Beranda; App tetap ter-mount (draf, Playground, timer ujian jalan terus) tetapi tersembunyi. */
+  active?: boolean;
+  /** Sisa segmen URL setelah id jalur, mis. ['ujian']. Diproses sekali lalu dilaporkan lewat onEntryConsumed. */
+  entry?: readonly string[];
+  onEntryConsumed?: () => void;
+  onHome?: () => void;
 }
 
-export default function App() {
+export default function App({ active = true, entry = NO_ENTRY, onEntryConsumed, onHome }: AppProps = {}) {
   const engine = useSqlEngine();
   const progressApi = useProgress();
   const { progress } = progressApi;
@@ -99,10 +95,12 @@ export default function App() {
   const missionSchema = useCompletionSchema(engine.referenceDb);
   const playgroundSchema = useCompletionSchema(engine.db, engine.dbVersion);
   const articleReads = useArticleReads();
-  // Lencana dihitung dari data yang ada; yang baru diraih diumumkan lewat toast (setelah mesin SQL siap).
+  // Lencana dihitung dari data yang ada; yang baru diraih diumumkan lewat toast (setelah mesin SQL siap). Selama jalur
+  // tersembunyi di balik Beranda pengumuman ditahan — mis. lencana dari ujian yang terkumpul otomatis baru muncul saat
+  // pengguna kembali, bukan habis tanpa pernah terlihat.
   const achievements = useAchievements(
     { missions: MISSIONS, progress, mistakes, exams: exam.history, reviewDeck: reviewDeck.deck, articlesRead: articleReads.read, articleCount: ARTICLES.length },
-    engine.status === 'ready',
+    engine.status === 'ready' && active,
   );
   /** Materi yang dipilih di tab Materi; null = materi utama misi aktif (direset saat pindah misi). */
   const [articleId, setArticleId] = useState<string | null>(null);
@@ -113,7 +111,7 @@ export default function App() {
 
   const [mode, setMode] = useState<AppMode>('mission');
   const [leftTab, setLeftTab] = useState<LeftTab>('mission');
-  const [activeMissionId, setActiveMissionId] = useState<string>(() => pickInitialMissionId(progress));
+  const [activeMissionId, setActiveMissionId] = useState<string>(() => pickInitialMissionId(MISSIONS, progress));
   /**
    * Misi yang solusinya sedang dilihat di sesi ini. Untuk misi yang sudah selesai,
    * markSolutionShown sengaja tidak mengubah progres (tanpa penalti retroaktif),
@@ -121,8 +119,19 @@ export default function App() {
    */
   const [viewedSolutions, setViewedSolutions] = useState<ReadonlySet<string>>(() => new Set());
 
-  if (engine.status === 'loading') return <LoadingScreen />;
-  if (engine.status === 'error') return <ErrorScreen message={engine.error} />;
+  // "Niat masuk" sekali pakai: '#/sql/ujian' dkk. memindahkan mode, lalu platform menormalkan URL menjadi '#/sql'.
+  // Berlaku saat jalur baru dimuat maupun saat jalur yang masih hangat dimasuki lagi; segmen yang tidak dikenal
+  // diabaikan tetapi tetap dilaporkan supaya URL-nya dirapikan. Mode sendiri tetap state (belum hidup di URL).
+  // Harus berada di atas return awal di bawah (aturan hooks) — mode yang dipilih berlaku begitu mesin SQL siap.
+  useEffect(() => {
+    if (!active || entry.length === 0) return;
+    const target = ENTRY_MODES.get(entry[0] ?? '');
+    if (target) setMode(target);
+    onEntryConsumed?.();
+  }, [active, entry, onEntryConsumed]);
+
+  if (engine.status === 'loading') return <LoadingScreen onHome={onHome} />;
+  if (engine.status === 'error') return <ErrorScreen message={engine.error} onHome={onHome} />;
 
   const mission = getMissionById(activeMissionId) ?? FIRST_MISSION;
   const missionProgress = getMissionProgress(progress, mission.id);
@@ -133,7 +142,7 @@ export default function App() {
   // hanya muncul bila memang tidak ada lagi yang tersisa.
   const following = getNextMission(mission.id);
   const nextMission =
-    following && isMissionUnlocked(MISSIONS, progress, following.id) ? following : findPendingMission(progress, mission.id);
+    following && isMissionUnlocked(MISSIONS, progress, following.id) ? following : findPendingMission(MISSIONS, progress, mission.id);
   const ready = engine.SQL !== null;
 
   const selectMission = (missionId: string) => {
@@ -420,6 +429,7 @@ export default function App() {
         <PerfLabContext.Provider value={perfLabLink}>
         <div className="flex min-h-screen flex-col bg-slate-950 lg:h-screen lg:overflow-hidden">
           <Header
+            onHome={onHome}
             progress={progress}
             rankProgress={progressApi.rankProgress}
             completedCount={progressApi.completedCount}

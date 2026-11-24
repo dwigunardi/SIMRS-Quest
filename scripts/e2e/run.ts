@@ -7,7 +7,8 @@
  *
  * Butuh Chrome atau Edge terpasang (atau CHROME_PATH). Kegagalan → exit code 1.
  * Melengkapi `npm run verify` untuk hal yang hanya terlihat di browser: Web Worker & batas waktu, tombol Hentikan,
- * alur boss di UI, unduh/unggah file cadangan, penilaian DDL (Tier 9) di UI, dan Mode Ujian (timer, refresh, kumpul otomatis).
+ * alur boss di UI, unduh/unggah file cadangan, penilaian DDL (Tier 9) di UI, Mode Ujian (timer, refresh, kumpul otomatis),
+ * dan Beranda + shell platform (rute, jalur hangat, tema, pulihkan cadangan).
  */
 import { Browser } from './browser';
 import { SuiteContext, type CheckResult } from './context';
@@ -17,12 +18,14 @@ import { backupSuite } from './suites/backup';
 import { bossSuite } from './suites/boss';
 import { ddlSuite } from './suites/ddl';
 import { examSuite } from './suites/exam';
+import { homeSuite } from './suites/home';
 import { perfLabSuite } from './suites/perfLab';
 import { reviewSuite } from './suites/review';
 import { tier10Suite } from './suites/tier10';
 import { workerSuite } from './suites/worker';
 
 const SUITES: Record<string, { title: string; run: (t: SuiteContext) => Promise<void> }> = {
+  home: { title: 'Beranda & shell platform', run: homeSuite },
   worker: { title: 'Eksekusi terlindungi (worker, batas waktu, Hentikan, Playground)', run: workerSuite },
   boss: { title: 'Boss Challenge', run: bossSuite },
   backup: { title: 'Cadangan progres (ekspor/impor)', run: backupSuite },

@@ -1,11 +1,12 @@
 import { useCallback, useState } from 'react';
+import { BRIEF_FOLD_KEY } from '../lib/storageKeys';
 
 /**
  * Pilihan lipat/buka Skenario & Tugas, diingat di browser (berlaku untuk semua misi).
  * Default: Skenario dilipat (pratinjau beberapa baris), Tugas terbuka penuh.
  * localStorage bisa tidak tersedia (mode privat, diblokir) — selalu jatuh ke default.
  */
-const STORAGE_KEY = 'simrs-sql-quest:brief-fold:v1';
+const STORAGE_KEY = BRIEF_FOLD_KEY;
 
 export interface BriefFold {
   storyExpanded: boolean;
@@ -14,9 +15,9 @@ export interface BriefFold {
 
 const DEFAULT_FOLD: BriefFold = { storyExpanded: false, taskExpanded: true };
 
-function readFold(): BriefFold {
+/** Baca pilihan lipatan dari teks JSON tersimpan; yang tidak ada / tidak terbaca jatuh ke default. */
+export function parseBriefFold(raw: string | null): BriefFold {
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_FOLD;
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed !== 'object' || parsed === null) return DEFAULT_FOLD;
@@ -26,6 +27,14 @@ function readFold(): BriefFold {
       storyExpanded: typeof story === 'boolean' ? story : DEFAULT_FOLD.storyExpanded,
       taskExpanded: typeof task === 'boolean' ? task : DEFAULT_FOLD.taskExpanded,
     };
+  } catch {
+    return DEFAULT_FOLD;
+  }
+}
+
+function readFold(): BriefFold {
+  try {
+    return parseBriefFold(window.localStorage.getItem(STORAGE_KEY));
   } catch {
     return DEFAULT_FOLD;
   }

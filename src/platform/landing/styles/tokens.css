@@ -1,0 +1,130 @@
+/*
+ * Token warna landing (Beranda). Dipilih lewat atribut data-theme pada <html> — dipasang oleh LandingRoot dan
+ * dilepas lagi saat Beranda tidak tampil, jadi layar jalur (tema gelap slate/emerald) tidak tersentuh.
+ *
+ * Nilai ditulis sebagai kanal "R G B" supaya Tailwind bisa menambahkan alpha: bg-q-primary/20, text-q-ink/70, …
+ * (lihat perluasan `q` di tailwind.config.js). Kontras tiap pasangan teks/latar diperiksa scripts/verify/landing.ts
+ * (WCAG AA) — bila mengubah nilai di sini, jalankan `npm run verify`.
+ *
+ * Yang digeser dari palet awal demi kontras AA (dihitung, bukan dikira-kira):
+ * - teks hijau/teal/amber/merah di atas latar terang memakai varian "-ink" yang lebih gelap; warna palet aslinya
+ *   (primary, brand, amber, coral, success) tetap dipakai sebagai ISIAN, ikon, dan hiasan;
+ * - teks putih di atas merah memakai coral-strong (#CE2C31), bukan coral (#E5484D → hanya 3,9:1);
+ * - tema gelap: primary #10B981 dengan teks #022C22.
+ */
+html[data-theme='light'] {
+  color-scheme: light;
+
+  /* Permukaan */
+  --q-bg: 255 255 255; /* #FFFFFF latar halaman */
+  --q-surface: 255 255 255; /* #FFFFFF kartu */
+  --q-muted: 237 243 240; /* #EDF3F0 isian netral lembut (chip, hover) */
+  --q-tint: 221 245 236; /* #DDF5EC mint, latar section */
+  --q-band: 19 78 74; /* #134E4A pita marquee (hijau pinus) */
+  --q-footer: 240 245 243; /* #F0F5F3 */
+  --q-border: 223 231 227; /* #DFE7E3 */
+  --q-border-strong: 111 133 125; /* #6F857D batas kontrol (≥ 3:1) */
+
+  /* Teks */
+  --q-ink: 33 33 33; /* #212121 = rgba(0,0,0,.87) di atas putih */
+  --q-ink-soft: 92 102 98; /* #5C6662 (±60%) */
+  --q-band-ink: 255 255 255; /* teks di atas band */
+  --q-band-soft: 167 215 207; /* #A7D7CF teks sekunder di atas band */
+
+  /* Hijau utama */
+  --q-primary: 0 135 90; /* #00875A */
+  --q-primary-hover: 0 122 81; /* #007A51 */
+  --q-primary-shadow: 0 96 63; /* #00603F bayangan tombol 3D */
+  --q-on-primary: 255 255 255;
+  --q-primary-ink: 0 112 74; /* #00704A hijau sebagai TEKS/tautan */
+
+  /* Teal merek */
+  --q-brand: 20 184 166; /* #14B8A6 wordmark, gelombang */
+  --q-brand-ink: 13 107 100; /* #0D6B64 teal sebagai teks */
+
+  /* Amber (XP, streak, api) */
+  --q-amber: 245 166 35; /* #F5A623 */
+  --q-amber-ink: 122 74 0; /* #7A4A00 */
+  --q-amber-soft: 254 243 217; /* #FEF3D9 */
+  --q-on-amber: 58 37 0; /* #3A2500 */
+
+  /* Coral (gagal, boss) */
+  --q-coral: 229 72 77; /* #E5484D */
+  --q-coral-strong: 206 44 49; /* #CE2C31 isian merah berteks putih */
+  --q-coral-ink: 180 35 42; /* #B4232A */
+  --q-coral-soft: 253 236 236; /* #FDECEC */
+  --q-on-coral: 255 255 255;
+
+  /* Sukses */
+  --q-success: 34 197 94; /* #22C55E */
+  --q-success-ink: 22 101 52; /* #166534 */
+  --q-success-soft: 220 252 231; /* #DCFCE7 */
+  --q-on-success: 5 46 22; /* #052E16 */
+
+  --q-focus: 0 96 63; /* #00603F garis fokus */
+  --q-mascot-line: 19 78 74; /* #134E4A garis luar maskot */
+
+  --q-shadow-float: 0 1px 2px rgb(0 0 0 / 6%), 0 18px 44px -28px rgb(0 0 0 / 40%);
+  --q-shadow-pop: 0 1px 2px rgb(0 0 0 / 8%), 0 12px 32px -12px rgb(0 0 0 / 28%);
+}
+
+html[data-theme='dark'] {
+  color-scheme: dark;
+
+  --q-bg: 2 6 23; /* #020617 */
+  --q-surface: 15 23 42; /* #0F172A */
+  --q-muted: 23 32 51; /* #172033 */
+  --q-tint: 11 42 38; /* #0B2A26 */
+  --q-band: 13 59 55; /* #0D3B37 */
+  --q-footer: 11 17 32; /* #0B1120 */
+  --q-border: 30 41 59; /* #1E293B */
+  --q-border-strong: 100 116 139; /* #64748B */
+
+  --q-ink: 241 245 249; /* #F1F5F9 */
+  --q-ink-soft: 148 163 184; /* #94A3B8 */
+  --q-band-ink: 241 245 249;
+  --q-band-soft: 159 211 203; /* #9FD3CB */
+
+  --q-primary: 16 185 129; /* #10B981 */
+  --q-primary-hover: 52 211 153; /* #34D399 */
+  --q-primary-shadow: 4 120 87; /* #047857 */
+  --q-on-primary: 2 44 34; /* #022C22 */
+  --q-primary-ink: 52 211 153; /* #34D399 */
+
+  --q-brand: 20 184 166; /* #14B8A6 */
+  --q-brand-ink: 45 212 191; /* #2DD4BF */
+
+  --q-amber: 245 166 35; /* #F5A623 */
+  --q-amber-ink: 251 191 36; /* #FBBF24 */
+  --q-amber-soft: 51 36 10; /* #33240A */
+  --q-on-amber: 58 37 0;
+
+  --q-coral: 229 72 77; /* #E5484D */
+  --q-coral-strong: 206 44 49; /* #CE2C31 */
+  --q-coral-ink: 255 133 137; /* #FF8589 */
+  --q-coral-soft: 58 21 23; /* #3A1517 */
+  --q-on-coral: 255 255 255;
+
+  --q-success: 34 197 94; /* #22C55E */
+  --q-success-ink: 74 222 128; /* #4ADE80 */
+  --q-success-soft: 12 42 27; /* #0C2A1B */
+  --q-on-success: 5 46 22;
+
+  --q-focus: 94 234 212; /* #5EEAD4 */
+  --q-mascot-line: 94 234 212; /* #5EEAD4 */
+
+  /* Di latar hampir hitam bayangan gelap tidak terlihat: tambah garis tepi tipis dan pendar zamrud di bawah. */
+  --q-shadow-float: 0 0 0 1px rgb(148 163 184 / 10%), 0 18px 44px -28px rgb(0 0 0 / 90%), 0 30px 70px -36px rgb(16 185 129 / 45%);
+  --q-shadow-pop: 0 0 0 1px rgb(148 163 184 / 14%), 0 12px 32px -12px rgb(0 0 0 / 80%);
+}
+
+/* Jendela kode & mockup layar jalur: SAMA di kedua tema (layar jalur memang selalu gelap). */
+html[data-theme] {
+  --q-code-bg: 15 23 42; /* #0F172A */
+  --q-code-deep: 2 6 23; /* #020617 latar halaman aplikasi */
+  --q-code-chrome: 30 41 59; /* #1E293B bilah judul, baris tab */
+  --q-code-border: 51 65 85; /* #334155 */
+  --q-code-ink: 226 232 240; /* #E2E8F0 */
+  --q-code-muted: 148 163 184; /* #94A3B8 nomor baris, teks sekunder */
+  --q-emoji-base: 236 246 241; /* #ECF6F1 alas emoji pangkat & lencana: terang di kedua tema */
+}

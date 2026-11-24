@@ -14,7 +14,7 @@ import type { MistakeEvent } from './mistakes';
 import { getMissionProgress, toLocalDateKey } from './progress';
 import type { Mission, UserProgress } from '../types';
 
-export const REVIEW_KEY = 'simrs-sql-quest:review:v1';
+export { REVIEW_KEY } from './storageKeys';
 /** Jarak tayang (hari) per kotak. */
 export const REVIEW_INTERVALS = [1, 3, 7, 14, 30, 60] as const;
 export const MAX_BOX = REVIEW_INTERVALS.length - 1;

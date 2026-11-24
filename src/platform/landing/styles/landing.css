@@ -1,0 +1,72 @@
+/*
+ * Gaya global landing (Beranda). SEMUA aturan dibatasi ke html[data-q-landing] — atribut yang dipasang LandingRoot saat
+ * Beranda tampil dan dilepas saat jalur tampil — supaya layar jalur tidak berubah sedikit pun.
+ */
+@import './fonts.css';
+@import './tokens.css';
+
+html[data-q-landing] body {
+  background-color: rgb(var(--q-bg));
+  color: rgb(var(--q-ink));
+  font-family: 'Varela Round', ui-rounded, 'Segoe UI', system-ui, sans-serif;
+}
+
+/*
+ * Teks terseleksi memakai warna tinta penuh: tanpa ini teks sekunder di atas latar seleksi turun ke ±3,8:1 (dihitung:
+ * ink-soft di atas mint + hijau 25%). Di atas latar gelap tetap (q-on-dark) tintanya tinta terang jendela kode.
+ */
+html[data-q-landing] ::selection {
+  background-color: rgb(var(--q-primary) / 0.25);
+  color: rgb(var(--q-ink));
+}
+html[data-q-landing] .q-on-dark ::selection,
+html[data-q-landing] .q-on-dark::selection {
+  background-color: rgb(94 234 212 / 0.3);
+  color: rgb(var(--q-code-ink));
+}
+
+/* Garis fokus 2px untuk semua kontrol landing, termasuk yang di-portal Radix ke <body> (menu, dialog, tooltip). */
+html[data-q-landing] :focus-visible {
+  outline: 2px solid rgb(var(--q-focus));
+  outline-offset: 2px;
+}
+
+/* Di atas latar gelap tetap (band, jendela kode, mockup aplikasi) garis fokus harus terang di kedua tema. */
+html[data-q-landing] .q-on-dark {
+  --q-focus: 94 234 212;
+}
+
+/*
+ * Jarak tunggal antar-section: dua section berlatar sama yang bersebelahan dipisah SATU jarak (padding bawah yang
+ * pertama), bukan padding bawah + padding atas. Atributnya dipasang ui/Section.tsx.
+ */
+html[data-q-landing] section[data-q-gap][data-q-tone='default'] + section[data-q-gap][data-q-tone='default'],
+html[data-q-landing] section[data-q-gap][data-q-tone='tint'] + section[data-q-gap][data-q-tone='tint'] {
+  padding-top: 0;
+}
+
+/* Tautan dalam halaman & fokus keyboard tidak berhenti di balik navbar yang menempel (tinggi 60px). */
+html[data-q-landing] {
+  scroll-padding-top: 76px;
+}
+
+/* Daftar tab yang bisa digulir mendatar di layar sempit: tanpa bilah gulir. */
+.q-no-scrollbar {
+  scrollbar-width: none;
+}
+.q-no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Animasi CSS tak berujung (denyut penanda, titik badge) berhenti saat pengguna menekan "Jeda animasi" di navbar. */
+html[data-q-landing][data-q-motion='paused'] .q-loop {
+  animation: none !important;
+}
+
+/* Animasi CSS landing (accordion, menu) ikut berhenti bila pengguna meminta gerak dikurangi. */
+@media (prefers-reduced-motion: reduce) {
+  html[data-q-landing] .q-anim {
+    animation: none !important;
+    transition: none !important;
+  }
+}

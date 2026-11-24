@@ -16,8 +16,7 @@ export const EXAM_COUNTS = [5, 10, 15] as const;
 /** Batas waktu (menit); null = tanpa batas. */
 export const EXAM_MINUTES = [15, 30, 45, null] as const;
 export const MAX_HISTORY = 20;
-export const EXAM_SESSION_KEY = 'simrs-sql-quest:exam-session:v1';
-export const EXAM_HISTORY_KEY = 'simrs-sql-quest:exams:v1';
+export { EXAM_HISTORY_KEY, EXAM_SESSION_KEY } from './storageKeys';
 
 export type ExamMission = Extract<Mission, { kind: 'sql' } | { kind: 'predict' }>;
 
