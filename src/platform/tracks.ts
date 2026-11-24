@@ -58,6 +58,14 @@ export interface TrackGlance {
 /** Fungsi murni: HANYA MEMBACA storage, tidak pernah menulis, tidak melempar. */
 export type GlanceFn = (storage: Pick<Storage, 'getItem'>, now: Date) => TrackGlance;
 
+/**
+ * Penjaga data jalur, dijalankan Beranda SEKALI sebelum ringkasan pertama dibaca: nilai tersimpan yang ada tetapi
+ * tidak terbaca disalin ke karantina (lib/storageGuard) — langkah yang sama dengan pemuat di dalam jalur, supaya
+ * peringatan "data tidak terbaca" sudah tampil walau pengguna belum pernah masuk ke jalurnya. Hanya MENAMBAH salinan
+ * karantina: kunci aslinya tidak pernah diubah atau dihapus. Tidak melempar.
+ */
+export type GuardFn = (storage: Pick<Storage, 'getItem' | 'setItem'>, now: Date) => void;
+
 /* ------------------------------------------------------------------ */
 /* Manifest                                                            */
 /* ------------------------------------------------------------------ */
@@ -86,8 +94,8 @@ export interface TrackManifest {
   meta: string[];
   /** Komponen jalur (hanya jalur 'tersedia'). */
   load?: () => Promise<{ default: ComponentType<TrackProps> }>;
-  /** Ringkasan untuk Beranda (hanya jalur 'tersedia'). */
-  glance?: () => Promise<{ glance: GlanceFn }>;
+  /** Ringkasan untuk Beranda (hanya jalur 'tersedia'), beserta penjaga datanya bila ada. */
+  glance?: () => Promise<{ glance: GlanceFn; guard?: GuardFn }>;
 }
 
 export const TRACKS: readonly TrackManifest[] = [

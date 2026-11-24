@@ -33,6 +33,9 @@ export const REVIEW_KEY = 'simrs-sql-quest:review:v1';
 /** Id lencana yang sudah diumumkan (string[]). */
 export const ACHIEVEMENTS_SEEN_KEY = 'simrs-sql-quest:achievements-seen:v1';
 
+/** Awalan beku semua kunci jalur SQL (lihat catatan di kepala berkas). */
+export const SQL_KEY_PREFIX = 'simrs-sql-quest:';
+
 /** Semua kunci jalur SQL. */
 export const SQL_TRACK_KEYS: readonly string[] = [
   PROGRESS_KEY,
@@ -63,3 +66,9 @@ export const HOME_INTRO_KEY = 'simrs-quest:home-intro:v1';
  * pernah dihapus, jadi tanpa catatan ini peringatannya akan tampil selamanya; karantina yang LEBIH BARU tetap tampil.
  */
 export const QUARANTINE_ACK_KEY = 'simrs-quest:quarantine-ack:v1';
+/**
+ * Tema Beranda pilihan pengguna: 'light' | 'dark' (teks polos, bukan JSON). Tidak ada = mengikuti tema sistem.
+ * Dibaca juga oleh skrip pra-gambar di index.html (ditulis sebagai literal di sana; scripts/verify/landing.ts
+ * memeriksa keduanya sama).
+ */
+export const THEME_KEY = 'simrs-quest:theme:v1';

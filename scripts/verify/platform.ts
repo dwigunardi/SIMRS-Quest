@@ -39,7 +39,7 @@ import {
 import { PRODUCT_NAME, PRODUCT_TAGLINE } from '../../src/platform/brand';
 import { HOME_ROUTE, RESERVED_SEGMENTS, createRouteStore, formatRoute, parseRoute, type Route, type RouterEnv } from '../../src/platform/router';
 import { TRACKS, getTrack } from '../../src/platform/tracks';
-import { glance } from '../../src/tracks/sql/glance';
+import { glance, guard } from '../../src/tracks/sql/glance';
 import type { Mission, UserProgress } from '../../src/types';
 import { MemoryStorage, firstDifference } from './memoryStorage';
 import { assert } from './report';
@@ -226,7 +226,7 @@ function runtimeImports(source: string): string[] {
  * Semua yang terjangkau lewat impor STATIS dari `entry` = isi bundel awal. Berkas proyek dicatat sebagai path relatif
  * ('src/…'), paket npm sebagai namanya. Impor yang tidak bisa ditemukan berkasnya dicatat dengan awalan '?'.
  */
-function staticClosure(entry: string): string[] {
+export function staticClosure(entry: string): string[] {
   const seen = new Set<string>();
   const queue = [entry];
   const fileAt = (path: string) => existsSync(fileURLToPath(new URL(`../../${path}`, import.meta.url)));
@@ -252,6 +252,45 @@ function staticClosure(entry: string): string[] {
     }
   }
   return [...seen].sort();
+}
+
+/**
+ * Yang boleh ikut bundel awal (Beranda + shell). Data misi/materi, mesin SQL, komponen jalur, dan modul cadangan hanya
+ * boleh dijangkau lewat impor dinamis (manifest.load / manifest.glance / import('…/backupImport')). Menambah modul
+ * ringan baru? Daftarkan di sini dengan sadar. Dipakai juga oleh scripts/verify/landing.ts.
+ *
+ * Berkas proyek: lapisan platform (termasuk landing), dua modul storage ringan, dan penyorot SQL (tokenizer murni +
+ * peta kelas warna) yang dipakai jendela kode landing.
+ */
+export function isLightFile(file: string): boolean {
+  return (
+    file === 'src/main.tsx' ||
+    file === 'src/index.css' ||
+    file.startsWith('src/platform/') ||
+    file === 'src/lib/storageGuard.ts' ||
+    file === 'src/lib/storageKeys.ts' ||
+    file === 'src/lib/sqlHighlight.ts' ||
+    file === 'src/components/HighlightedCode.tsx'
+  );
+}
+
+/** Paket npm yang boleh diimpor statis oleh Beranda. cobe dan canvas-confetti SENGAJA tidak ada: keduanya dimuat malas. */
+const LIGHT_PACKAGES: readonly string[] = [
+  'react',
+  'react-dom/client',
+  'lucide-react',
+  'framer-motion',
+  'clsx',
+  'tailwind-merge',
+  'class-variance-authority',
+  'embla-carousel-react',
+  'embla-carousel-autoplay',
+];
+/** Awalan paket yang boleh: primitif Radix dan logo teknologi yang diimpor per ikon (bukan indeks paketnya). */
+const LIGHT_PACKAGE_PREFIXES: readonly string[] = ['@radix-ui/react-', '@icons-pack/react-simple-icons/icons/'];
+
+export function isLightPackage(spec: string): boolean {
+  return LIGHT_PACKAGES.includes(spec) || LIGHT_PACKAGE_PREFIXES.some((prefix) => spec.startsWith(prefix));
 }
 
 async function verifyRegistry(ok: Check): Promise<void> {
@@ -297,13 +336,9 @@ async function verifyRegistry(ok: Check): Promise<void> {
   ok(staticImports("import a from './x';\nexport { b } from \"../y\";\nimport 'z';\nconst c = () => import('./dinamis');").join() === './x,../y,z', 'pemeriksa impor statis harus mengenali import/export-from dan mengabaikan impor dinamis');
   ok(runtimeImports("import type { A } from './tipe';\nimport { b, type C } from './nilai';").join() === './nilai', 'pemeriksa impor runtime harus membuang import type tetapi mempertahankan impor nilai');
 
-  // Bundel awal (Beranda + shell): hanya lapisan platform dan dua modul storage ringan. Data misi/materi, mesin SQL,
-  // komponen jalur, dan modul cadangan hanya boleh dijangkau lewat impor dinamis (manifest.load / manifest.glance /
-  // import('…/backupImport')). Menambah modul ringan baru? Daftarkan di sini dengan sadar.
-  const lightFiles = (file: string) => file === 'src/main.tsx' || file === 'src/index.css' || file.startsWith('src/platform/') || file === 'src/lib/storageGuard.ts' || file === 'src/lib/storageKeys.ts';
-  const lightPackages = ['react', 'react-dom/client', 'lucide-react'];
+  // Bundel awal (Beranda + shell): hanya yang lolos isLightFile / isLightPackage di atas.
   const initial = staticClosure('src/main.tsx');
-  const heavy = initial.filter((item) => !lightFiles(item) && !lightPackages.includes(item));
+  const heavy = initial.filter((item) => !isLightFile(item) && !isLightPackage(item));
   ok(heavy.length === 0, `bundel awal (impor statis dari src/main.tsx) harus tetap ringan — tidak diizinkan: ${heavy.join(', ')}`);
   for (const must of ['src/platform/PlatformShell.tsx', 'src/platform/Home.tsx', 'src/platform/router.ts', 'src/platform/tracks.ts', 'src/platform/home/useTrackGlance.ts']) {
     ok(initial.includes(must), `penelusur impor statis harus menjangkau ${must} dari src/main.tsx (penelusurnya rusak?)`);
@@ -556,6 +591,12 @@ function verifyResume(ok: Check): void {
 /* Glance                                                              */
 /* ------------------------------------------------------------------ */
 
+function blockedStorage(): MemoryStorage {
+  const storage = new MemoryStorage();
+  storage.failReads = true;
+  return storage;
+}
+
 function verifyGlance(ok: Check): void {
   const now = new Date(2026, 10, 23, 12, 0, 0);
   const first = requireFirstMission(MISSIONS);
@@ -581,7 +622,36 @@ function verifyGlance(ok: Check): void {
   }
   ok(result !== null, 'glance: storage rusak tidak boleh melempar');
   ok(result !== null && firstDifference(result, fresh) === null, 'glance: storage rusak → sama dengan pengguna baru (started=false, quarantinedAt=null)');
-  ok(broken.writes === 0 && broken.keys().length === SQL_TRACK_KEYS.length, 'glance: storage rusak tidak ditulis (karantina adalah tugas pemuat, bukan glance)');
+  ok(broken.writes === 0 && broken.keys().length === SQL_TRACK_KEYS.length, 'glance: storage rusak tidak ditulis (karantina adalah tugas pemuat/penjaga, bukan glance)');
+
+  // Penjaga data (dijalankan Beranda sebelum glance pertama): mengkarantina SETIAP kunci yang dijaga bila nilainya
+  // tidak terbaca, tanpa mengubah kunci aslinya; data valid/kosong tidak disentuh; tidak pernah melempar.
+  const rotten = new MemoryStorage(Object.fromEntries(SQL_TRACK_KEYS.map((key) => [key, '{rusak'])));
+  guard(rotten, T2);
+  for (const key of SQL_GUARDED_KEYS) {
+    const slots = readQuarantine(rotten, key);
+    ok(slots.length === 1 && slots[0]?.raw === '{rusak', `guard: nilai rusak di ${key} harus disalin ke karantina`);
+    ok(rotten.getItem(key) === '{rusak', `guard: kunci asli ${key} tidak boleh diubah`);
+  }
+  ok(rotten.keys().length === SQL_TRACK_KEYS.length + SQL_GUARDED_KEYS.length, 'guard: hanya menambah kunci karantina untuk kunci yang dijaga');
+  ok(glance(rotten, now).quarantinedAt === T2.toISOString(), 'guard → glance: karantina dari penjaga terbaca sebagai quarantinedAt');
+  const writesAfterFirst = rotten.writes;
+  guard(rotten, T3);
+  ok(rotten.writes === writesAfterFirst, 'guard: dijalankan ulang pada isi yang sama tidak menulis lagi');
+  const healthy = new MemoryStorage({ [PROGRESS_KEY]: JSON.stringify(progressWith(MISSIONS.slice(0, 3))), [REVIEW_KEY]: '{}', [SQL_GUARDED_KEYS[1] ?? '']: '{"events":[],"solved":{}}' });
+  guard(healthy, T2);
+  guard(new MemoryStorage(), T2);
+  ok(healthy.writes === 0, 'guard: data valid atau kosong tidak dikarantina');
+  let guardThrew = false;
+  try {
+    guard(blockedStorage(), T2);
+    const full = new MemoryStorage({ [PROGRESS_KEY]: '{rusak' });
+    full.failWrites = true;
+    guard(full, T2);
+  } catch {
+    guardThrew = true;
+  }
+  ok(!guardThrew, 'guard: storage yang diblokir / penuh tidak boleh membuatnya melempar');
 
   const blocked = new MemoryStorage();
   blocked.failReads = true;

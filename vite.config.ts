@@ -13,4 +13,19 @@ export default defineConfig({
   optimizeDeps: {
     exclude: [],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Pustaka yang dipakai Beranda sejak layar pertama dipisah dari kode aplikasi: isinya jarang berubah, jadi
+        // tetap ter-cache di browser saat aplikasi diperbarui, dan tidak ada satu berkas JS raksasa. Daftarnya SENGAJA
+        // sempit — pola "semua node_modules" akan ikut menyeret sql.js dan pustaka lain yang harus tetap dimuat malas.
+        manualChunks(id) {
+          const path = id.replace(/\\/g, '/');
+          if (/\/node_modules\/(react|react-dom|scheduler)\//.test(path)) return 'react';
+          if (/\/node_modules\/(framer-motion|motion-dom|motion-utils)\//.test(path)) return 'motion';
+          return undefined;
+        },
+      },
+    },
+  },
 });

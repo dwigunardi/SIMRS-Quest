@@ -4,13 +4,24 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
-      rel="stylesheet"
-    />
     <title>SIMRS Quest</title>
+    <script>
+      // Beranda punya tema terang/gelap sendiri (src/platform/landing/hooks/useTheme.ts). Penandanya dipasang di sini,
+      // sebelum gambar pertama, supaya latar tidak berkedip gelap lalu terang saat halaman dibuka. Hanya untuk rute
+      // Beranda: layar jalur selalu gelap, dan LandingRoot melepas kedua atribut ini begitu Beranda ditinggalkan.
+      (function () {
+        try {
+          if (/^#\/[^/]/.test(location.hash)) return;
+          var theme = localStorage.getItem('simrs-quest:theme:v1');
+          if (theme !== 'light' && theme !== 'dark') theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          var root = document.documentElement;
+          root.setAttribute('data-q-landing', '');
+          root.setAttribute('data-theme', theme);
+        } catch (error) {
+          /* penyimpanan diblokir: tema dipasang React setelah dimuat */
+        }
+      })();
+    </script>
   </head>
   <body class="bg-slate-950 text-slate-200">
     <div id="root"></div>

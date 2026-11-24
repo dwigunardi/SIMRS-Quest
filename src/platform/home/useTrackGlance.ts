@@ -2,6 +2,10 @@
  * Ringkasan sebuah jalur untuk Beranda. Fungsi glance jalur diimpor DINAMIS (ia menarik data misi), lalu dijalankan
  * terhadap localStorage — jalurnya sendiri tidak di-mount dan mesin SQL tidak dimuat.
  *
+ * Sebelum ringkasan PERTAMA dibaca, penjaga data jalur (`guard`, bila ada) dijalankan sekali: nilai tersimpan yang
+ * tidak terbaca disalin ke karantina, sehingga peringatannya sudah tampil di Beranda walau jalurnya belum dibuka.
+ * Sesudah itu semuanya hanya membaca.
+ *
  * Dihitung ulang saat: pertama tampil, tab lain mengubah storage, tab ini kembali terlihat, dan — karena jalur yang
  * masih hangat di balik Beranda bisa mengumpulkan ujian sendiri — begitu tenggat ujian lewat, lalu berkala sampai sesi
  * ujian itu hilang dari storage.
@@ -13,6 +17,11 @@ import type { GlanceFn, TrackGlance, TrackManifest } from '../tracks';
 export type GlanceState = { status: 'loading' } | { status: 'ready'; glance: TrackGlance } | { status: 'error' };
 
 const EMPTY_STORAGE: Pick<Storage, 'getItem'> = { getItem: () => null };
+/** Dua ringkasan berisi sama? (objek data polos, urutan kunci tetap → cukup dibandingkan sebagai JSON). */
+function sameGlance(a: TrackGlance, b: TrackGlance): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
 /** Selang pemeriksaan ulang setelah tenggat ujian lewat. */
 const POLL_MS = 2000;
 /** setTimeout hanya menerima jeda sampai ±24,8 hari. */
@@ -26,7 +35,10 @@ export function useTrackGlance(track: TrackManifest | undefined): GlanceState {
     const fn = glanceFn.current;
     if (!fn) return;
     try {
-      setState({ status: 'ready', glance: fn(browserStorage() ?? EMPTY_STORAGE, new Date()) });
+      const next = fn(browserStorage() ?? EMPTY_STORAGE, new Date());
+      // Hasil yang sama → state LAMA dipertahankan (tanpa render ulang). Penting untuk pemeriksaan berkala setelah
+      // tenggat ujian lewat: tanpa ini seluruh landing dirender ulang tiap POLL_MS walau tidak ada yang berubah.
+      setState((previous) => (previous.status === 'ready' && sameGlance(previous.glance, next) ? previous : { status: 'ready', glance: next }));
     } catch {
       setState({ status: 'error' });
     }
@@ -42,6 +54,15 @@ export function useTrackGlance(track: TrackManifest | undefined): GlanceState {
     load()
       .then((mod) => {
         if (cancelled) return;
+        // Penjaga data: sekali, sebelum ringkasan pertama. Tidak pernah menggagalkan ringkasan.
+        const storage = browserStorage();
+        if (mod.guard && storage) {
+          try {
+            mod.guard(storage, new Date());
+          } catch {
+            /* penjaga tidak boleh melempar; kalaupun iya, ringkasan tetap dibaca */
+          }
+        }
         glanceFn.current = mod.glance;
         refresh();
       })

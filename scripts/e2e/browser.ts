@@ -42,6 +42,8 @@ export class Browser {
   readonly problems: string[] = [];
   private nextId = 0;
   private readonly pending = new Map<number, (value: Record<string, unknown>) => void>();
+  /** Penunggu event CDP per nama metode (lihat waitForEvent). */
+  private readonly waiters = new Map<string, Array<(params: Record<string, any>) => void>>();
 
   private constructor(
     private readonly chrome: ChildProcess,
@@ -89,6 +91,13 @@ export class Browser {
       this.pending.delete(msg.id);
       return;
     }
+    if (msg.method !== undefined) {
+      const waiting = this.waiters.get(msg.method);
+      if (waiting !== undefined) {
+        this.waiters.delete(msg.method);
+        for (const resolve of waiting) resolve(msg.params ?? {});
+      }
+    }
     if (msg.method === 'Runtime.exceptionThrown') {
       const d = msg.params?.exceptionDetails;
       this.problems.push(`exception: ${d?.exception?.description ?? d?.text ?? '?'}`);
@@ -103,6 +112,26 @@ export class Browser {
     const id = ++this.nextId;
     this.ws.send(JSON.stringify({ id, method, params }));
     return new Promise((resolve) => this.pending.set(id, resolve));
+  }
+
+  /**
+   * Tunggu SATU event CDP berikutnya dengan nama itu (mis. 'Page.fileChooserOpened') dan kembalikan payload-nya;
+   * null bila tidak datang dalam `ms`. Panggil SEBELUM tindakan yang memicunya.
+   */
+  waitForEvent(method: string, ms = 5000): Promise<Record<string, any> | null> {
+    return new Promise((resolve) => {
+      const onEvent = (params: Record<string, any>) => {
+        clearTimeout(timer);
+        resolve(params);
+      };
+      const timer = setTimeout(() => {
+        const list = this.waiters.get(method)?.filter((fn) => fn !== onEvent) ?? [];
+        if (list.length > 0) this.waiters.set(method, list);
+        else this.waiters.delete(method);
+        resolve(null);
+      }, ms);
+      this.waiters.set(method, [...(this.waiters.get(method) ?? []), onEvent]);
+    });
   }
 
   /** Jalankan ekspresi JS di halaman (boleh async) dan kembalikan nilainya. */

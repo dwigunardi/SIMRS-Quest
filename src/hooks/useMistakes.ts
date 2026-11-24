@@ -46,7 +46,7 @@ export function parseMistakeLog(raw: string | null): MistakeLog {
   }
 }
 
-const isEmptyLog = (log: MistakeLog) => log.events.length === 0 && Object.keys(log.solved).length === 0;
+export const isEmptyLog = (log: MistakeLog): boolean => log.events.length === 0 && Object.keys(log.solved).length === 0;
 
 /**
  * Isi storage terbaru, atau null bila storage tidak tersedia / belum pernah ditulis. Nilai yang ada tetapi tidak

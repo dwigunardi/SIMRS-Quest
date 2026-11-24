@@ -1,27 +1,39 @@
 /**
- * Beranda belajar: tempat mendarat setiap kali aplikasi dibuka. Bukan halaman pemasaran — isinya "lanjut dari mana",
- * apa yang relevan hari ini, dan jalur yang ada.
+ * Beranda: landing satu halaman sekaligus tempat mendarat setiap kali aplikasi dibuka. Pengguna baru melihat apa isi
+ * aplikasi ini; pengguna lama melihat "lanjut dari mana" dan apa yang relevan hari ini di bagian paling atas.
  *
- * Beranda RINGAN: tidak memuat mesin SQL dan tidak mengimpor data misi secara statis. Ringkasan diambil lewat
- * manifest.glance() (impor dinamis) yang hanya membaca localStorage; selama itu berlangsung tampil kerangka.
+ * Beranda RINGAN: tidak memuat mesin SQL dan tidak mengimpor data misi secara statis. Ringkasan progres diambil lewat
+ * manifest.glance() (impor dinamis) yang hanya membaca localStorage. Bagian di bawah lipatan (landing/LandingBelow)
+ * dimuat malas sebagai satu chunk.
+ *
+ * Posisi gulir: datang lewat navigasi biasa (tombol Beranda, tautan, pengalihan) → mulai dari atas; datang lewat
+ * tombol Kembali/Maju browser → kembali ke posisi terakhir di halaman ini (disimpan di history.state entri Beranda).
+ *
+ * Tema terang/gelap hanya milik Beranda: LandingRoot memasang data-theme pada <html> selama Beranda tampil dan
+ * melepasnya saat di-unmount, jadi layar jalur selalu gelap seperti biasa.
+ *
  * Penanda untuk uji E2E: [data-testid="home"] dengan data-ready="true" setelah ringkasan siap.
  */
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
-import { Flame, Info, Sparkles, TriangleAlert, X } from 'lucide-react';
+import { Component, Suspense, lazy, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import { browserStorage } from '../lib/storageGuard';
-import { HOME_INTRO_KEY, QUARANTINE_ACK_KEY } from '../lib/storageKeys';
-import { BrandMark } from './BrandMark';
-import { PRODUCT_NAME } from './brand';
-import { ContinueCard } from './home/ContinueCard';
-import { RestorePanel } from './home/RestorePanel';
-import { Today, hasTodayItems } from './home/Today';
-import { TrackList } from './home/TrackList';
-import { BTN_ICON, BTN_PRIMARY, BTN_SECONDARY, LINK } from './home/ui';
+import { HOME_INTRO_KEY, QUARANTINE_ACK_KEY, SQL_KEY_PREFIX } from '../lib/storageKeys';
 import { useBackupRestore } from './home/useBackupRestore';
 import { useTrackGlance } from './home/useTrackGlance';
-import { Welcome } from './home/Welcome';
-import { formatRoute, navigate, type Route } from './router';
-import { TRACKS, type TrackGlance, type TrackManifest } from './tracks';
+import { HOME } from './landing/lib/content';
+import { prefersReducedMotion } from './landing/lib/scroll';
+import { CategoryMarquee } from './landing/sections/CategoryMarquee';
+import { Footer } from './landing/sections/Footer';
+import { Hero, modeOf } from './landing/sections/Hero';
+import { Navbar } from './landing/sections/Navbar';
+import { GlanceErrorAlert, IntroNote, NoticeBar, Notices, QuarantineAlert } from './landing/sections/Notices';
+import { RestorePanel } from './landing/sections/RestorePanel';
+import { TodayStrip } from './landing/sections/TodayStrip';
+import { Button3D } from './landing/ui/Button3D';
+import { LandingRoot } from './landing/ui/LandingRoot';
+import { Container } from './landing/ui/Section';
+import type { LandingBelowProps } from './landing/LandingBelow';
+import { navigate, parseRoute } from './router';
+import { TRACKS, getTrack, type TrackManifest } from './tracks';
 
 export interface HomeProps {
   /** Pemberitahuan satu baris dari shell (mis. tautan ke jalur yang belum tersedia). */
@@ -32,8 +44,53 @@ export interface HomeProps {
 /** Jalur utama Beranda: jalur 'tersedia' pertama. Ringkasan, "Lanjutkan", dan "Hari ini" berasal dari sini. */
 const PRIMARY: TrackManifest | undefined = TRACKS.find((t) => t.status === 'tersedia');
 
+/** Awalan kunci localStorage tiap jalur (hanya dipakai sebagai petunjuk "pernah mulai" sebelum ringkasan siap). */
+const TRACK_KEY_PREFIX: Readonly<Record<string, string>> = { sql: SQL_KEY_PREFIX };
+
 /** Jeda sebelum chunk jalur utama dihangatkan bila browser tidak punya requestIdleCallback. */
 const PREWARM_FALLBACK_MS = 800;
+
+/**
+ * Bagian 4–13: satu chunk terpisah. Pabrik lazy-nya dibuat ulang tiap "Coba muat lagi" (React.lazy menyimpan promise
+ * yang gagal, jadi komponen lazy yang sama tidak akan pernah mencoba lagi).
+ */
+function lazyBelow(): ComponentType<LandingBelowProps> {
+  return lazy(() => import('./landing/LandingBelow'));
+}
+
+/* ---- Posisi gulir Beranda di entri riwayatnya ---- */
+
+const SCROLL_STATE_KEY = 'simrsQuestHomeScroll';
+/** Jeda setelah guliran berhenti sebelum posisinya dicatat (history.replaceState dibatasi browser bila terlalu sering). */
+const SCROLL_SAVE_MS = 150;
+
+function historyState(): Record<string, unknown> {
+  try {
+    const state: unknown = window.history.state;
+    return typeof state === 'object' && state !== null ? (state as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
+}
+
+/** Posisi gulir yang tercatat di entri riwayat INI (ada hanya bila pengguna pernah menggulir Beranda di entri ini). */
+function savedScroll(): number | null {
+  const value = historyState()[SCROLL_STATE_KEY];
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
+}
+
+/** Catat posisi gulir di entri riwayat saat ini — hanya selama entri itu memang Beranda. */
+function saveScroll(): void {
+  if (parseRoute(window.location.hash).kind !== 'home') return;
+  const y = Math.round(window.scrollY);
+  const state = historyState();
+  if (state[SCROLL_STATE_KEY] === y) return;
+  try {
+    window.history.replaceState({ ...state, [SCROLL_STATE_KEY]: y }, '');
+  } catch {
+    /* dokumen tanpa origin: posisi tidak dicatat */
+  }
+}
 
 function readStored(key: string): string | null {
   try {
@@ -64,8 +121,9 @@ function storedTime(raw: string | null): number {
   return Date.parse(text);
 }
 
-function trackRoute(track: TrackManifest, ...rest: string[]): Route {
-  return { kind: 'track', trackId: track.id, rest };
+/** Buka jalur utama dari awal (tanpa tujuan khusus): jalur sendiri yang memilih misi "Lanjutkan". */
+function openPrimary(): void {
+  if (PRIMARY) navigate({ kind: 'track', trackId: PRIMARY.id, rest: [] });
 }
 
 export function Home({ notice, onDismissNotice }: HomeProps): JSX.Element {
@@ -73,20 +131,58 @@ export function Home({ notice, onDismissNotice }: HomeProps): JSX.Element {
   const glance = state.status === 'ready' ? state.glance : null;
   const ready = glance !== null;
   const started = glance?.started ?? null;
-  const primaryRef = useRef<HTMLButtonElement>(null);
+  const mode = modeOf(glance, state.status !== 'loading');
+  // Petunjuk sinkron sebelum ringkasan tiba: jalur utama pernah menyimpan sesuatu di browser ini.
+  const [expectReturning] = useState(() => PRIMARY !== undefined && hasStoredData(PRIMARY.id));
 
-  // Beranda selalu mulai dari atas (posisi gulir jalur yang ditinggalkan tidak terbawa).
+  // Navigasi biasa: mulai dari atas (posisi gulir jalur yang ditinggalkan tidak terbawa). Kembali/Maju browser ke entri
+  // Beranda yang pernah digulir: pulihkan posisinya — sekarang (tinggi halaman sudah dipesan BelowFallback) dan sekali
+  // lagi setelah bagian bawah benar-benar terpasang, selama pengguna belum menggulir sendiri.
+  const restoreTo = useRef<number | null>(null);
   useLayoutEffect(() => {
-    window.scrollTo(0, 0);
+    restoreTo.current = savedScroll();
+    window.scrollTo(0, restoreTo.current ?? 0);
+  }, []);
+  const onBelowReady = useCallback(() => {
+    const target = restoreTo.current;
+    if (target === null) return;
+    if (Math.abs(window.scrollY - target) < 400) window.scrollTo(0, target);
+    restoreTo.current = null;
+  }, []);
+  useEffect(() => {
+    let timer = 0;
+    const onScroll = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(saveScroll, SCROLL_SAVE_MS);
+    };
+    // Klik (mis. tautan ke jalur) bisa datang sebelum jeda habis: catat dulu, selagi entri riwayatnya masih Beranda.
+    const flush = () => {
+      window.clearTimeout(timer);
+      saveScroll();
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    document.addEventListener('click', flush, true);
+    document.addEventListener('keydown', flush, true);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('scroll', onScroll);
+      document.removeEventListener('click', flush, true);
+      document.removeEventListener('keydown', flush, true);
+    };
   }, []);
 
-  // Tombol utama mendapat fokus begitu ringkasan siap, supaya Enter langsung masuk — kecuali pengguna sudah
-  // memindahkan fokus sendiri selama kerangka tampil.
+  // Pemberitahuan rute muncul di puncak halaman: bawa pengguna ke sana (halaman ini panjang; tanpa ini pemberitahuan
+  // bisa muncul ribuan piksel di atas layar dan yang terlihat hanya URL yang berubah).
   useEffect(() => {
-    if (!ready) return;
-    const focused = document.activeElement;
-    if (focused === null || focused === document.body) primaryRef.current?.focus({ preventScroll: true });
-  }, [ready]);
+    if (notice === null) return;
+    window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+  }, [notice]);
+
+  /* ---- Bagian bawah (chunk malas) ---- */
+  const [belowAttempt, setBelowAttempt] = useState(0);
+  // Komponen lazy BARU tiap percobaan (belowAttempt sengaja menjadi satu-satunya dependensi).
+  const LandingBelow = useMemo(lazyBelow, [belowAttempt]);
+  const retryBelow = useCallback(() => setBelowAttempt((value) => value + 1), []);
 
   // Saat Beranda diam, ambil chunk jalur utama lebih dulu supaya "Lanjutkan" terasa seketika. Ini hanya mengunduh kode;
   // mesin SQL (WASM) baru dimuat ketika jalurnya benar-benar dibuka.
@@ -115,6 +211,17 @@ export function Home({ notice, onDismissNotice }: HomeProps): JSX.Element {
     if (started === false && !introSeen) markIntroSeen();
   }, [started, introSeen, markIntroSeen]);
   const showIntro = started === true && !introSeen;
+  // Catatan dianggap sudah dibaca begitu pengguna melangkah ke sebuah jalur — lewat tombol maupun tautan mana pun di
+  // halaman ini. Dicatat saat Beranda dilepas KARENA rutenya sudah berpindah ke jalur yang bisa dibuka: pengalihan
+  // kembali ke Beranda (jalur belum tersedia) dan pelepasan semu StrictMode tidak memenuhi syarat itu. (Pendengar
+  // 'hashchange' tidak bisa dipakai: shell sudah melepas Beranda sebelum pendengar itu sempat dipanggil.)
+  useEffect(() => {
+    if (!showIntro) return undefined;
+    return () => {
+      const route = parseRoute(window.location.hash);
+      if (route.kind === 'track' && getTrack(route.trackId)?.status === 'tersedia') writeStored(HOME_INTRO_KEY, new Date().toISOString());
+    };
+  }, [showIntro]);
 
   /* ---- Peringatan karantina ---- */
   const [ackAt, setAckAt] = useState(() => storedTime(readStored(QUARANTINE_ACK_KEY)));
@@ -127,204 +234,126 @@ export function Home({ notice, onDismissNotice }: HomeProps): JSX.Element {
     setAckAt(Date.parse(quarantinedAt));
   }, [quarantinedAt]);
 
+  /* ---- Pulihkan dari file cadangan ---- */
   // Memulihkan dari cadangan adalah tindak lanjut peringatan karantina, jadi peringatannya ikut dianggap selesai.
   const restore = useBackupRestore(ackQuarantine);
+  /** Hasil memilih file tampil di dekat kontrol yang memicunya: di bawah peringatan karantina, atau di hero. */
+  const [restoreOnTop, setRestoreOnTop] = useState(false);
+  const pickFromHero = useCallback(() => {
+    setRestoreOnTop(false);
+    restore.pick();
+  }, [restore.pick]);
+  const pickFromAlert = useCallback(() => {
+    setRestoreOnTop(true);
+    restore.pick();
+  }, [restore.pick]);
+  const restoreActive = restore.state.kind !== 'idle';
 
-  /** Pindah lewat kontrol Beranda. Catatan sekali tampil dianggap sudah dibaca begitu pengguna melangkah. */
-  const go = (route: Route) => {
-    if (showIntro) markIntroSeen();
-    navigate(route);
-  };
-
-  const restorePanel = <RestorePanel restore={restore} />;
-  /** Pengguna baru melihat hasil memilih file di bawah sambutan; pengguna lama di kelompok pemberitahuan paling atas. */
-  const restoreOnTop = started === true && restore.state.kind !== 'idle';
+  const hasNotices = notice !== null || state.status === 'error' || showQuarantine || showIntro || (restoreOnTop && restoreActive);
 
   return (
-    <div data-testid="home" data-ready={ready ? 'true' : 'false'} className="relative min-h-screen bg-slate-950">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-gradient-to-b from-emerald-500/[0.07] to-transparent" aria-hidden />
-      <div className="relative mx-auto flex w-full max-w-[960px] flex-col gap-8 px-4 pb-10 pt-5 sm:px-6 sm:pb-14 sm:pt-8">
-        <header className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <BrandMark />
-            <h1 className="truncate text-lg font-bold tracking-tight text-slate-100">{PRODUCT_NAME}</h1>
-          </div>
-          <StreakPill streak={glance?.streak ?? null} />
-        </header>
+    <LandingRoot data-testid="home" data-ready={ready ? 'true' : 'false'}>
+      <Navbar mode={mode} onStart={openPrimary} />
 
-        <main className="flex flex-col gap-8">
-          {notice !== null || showQuarantine || restoreOnTop ? (
-            <div className="flex flex-col gap-3">
-              {notice !== null ? (
-                <div role="status" className="flex items-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/[0.08] py-2 pl-4 pr-2 text-sm text-amber-100" data-testid="home-notice">
-                  <Info className="h-4 w-4 shrink-0 text-amber-300" aria-hidden />
-                  <p className="min-w-0 flex-1 break-words">{notice}</p>
-                  <button type="button" onClick={onDismissNotice} className={BTN_ICON} aria-label="Tutup pemberitahuan">
-                    <X className="h-4 w-4" aria-hidden />
-                  </button>
-                </div>
-              ) : null}
-              {showQuarantine && quarantinedAt !== null ? <QuarantineAlert at={quarantinedAt} onRestore={restore.pick} onDismiss={ackQuarantine} /> : null}
-              {/* Untuk pengguna lama, hasil memilih file tampil tepat di bawah peringatan yang memicunya. */}
-              {restoreOnTop ? restorePanel : null}
-            </div>
-          ) : null}
+      <main>
+        {hasNotices ? (
+          <Notices>
+            {notice !== null ? <NoticeBar text={notice} onClose={onDismissNotice} /> : null}
+            {state.status === 'error' ? <GlanceErrorAlert /> : null}
+            {showQuarantine && quarantinedAt !== null ? <QuarantineAlert at={quarantinedAt} onRestore={pickFromAlert} onDismiss={ackQuarantine} /> : null}
+            {/* Hasil memilih file tampil tepat di bawah peringatan yang memicunya. */}
+            {restoreOnTop && restoreActive ? <RestorePanel restore={restore} /> : null}
+            {showIntro ? <IntroNote trackTitle={PRIMARY?.title ?? ''} onClose={markIntroSeen} /> : null}
+          </Notices>
+        ) : null}
 
-          {state.status === 'error' ? (
-            <GlanceError
-              track={PRIMARY}
-              onOpen={() => {
-                if (PRIMARY) go(trackRoute(PRIMARY));
-              }}
-              primaryRef={primaryRef}
-            />
-          ) : glance === null || PRIMARY === undefined ? (
-            <HomeSkeleton />
-          ) : glance.started ? (
-            <>
-              {showIntro ? (
-                <div className="flex items-start gap-3 rounded-xl border border-sky-500/30 bg-sky-500/[0.08] py-2.5 pl-4 pr-2 text-sm text-sky-100" data-testid="home-intro">
-                  <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-sky-300" aria-hidden />
-                  <p className="min-w-0 flex-1 py-0.5 leading-relaxed">
-                    <strong className="font-semibold">Sekarang ada Beranda.</strong> Progres {PRIMARY.title}-mu utuh — tekan Lanjutkan untuk kembali ke misi terakhir.
-                  </p>
-                  <button type="button" onClick={markIntroSeen} className={BTN_ICON} aria-label="Tutup catatan">
-                    <X className="h-4 w-4" aria-hidden />
-                  </button>
-                </div>
-              ) : null}
-              <ContinueCard track={PRIMARY} glance={glance} onOpen={() => go(trackRoute(PRIMARY))} primaryRef={primaryRef} />
-              <Today glance={glance} onOpenExam={() => go(trackRoute(PRIMARY, 'ujian'))} onOpenProgress={() => go(trackRoute(PRIMARY, 'progres'))} />
-            </>
-          ) : (
-            <>
-              <div className="flex flex-col gap-3">
-                <Welcome track={PRIMARY} onStart={() => go(trackRoute(PRIMARY))} onRestore={restore.pick} primaryRef={primaryRef} />
-                {restorePanel}
-              </div>
-              {hasTodayItems(glance) ? (
-                <Today glance={glance} onOpenExam={() => go(trackRoute(PRIMARY, 'ujian'))} onOpenProgress={() => go(trackRoute(PRIMARY, 'progres'))} />
-              ) : null}
-            </>
-          )}
+        <Hero glance={glance} ready={state.status !== 'loading'} expectReturning={expectReturning} onStart={openPrimary} onRestore={pickFromHero}>
+          {!restoreOnTop && restoreActive ? <RestorePanel restore={restore} className="mt-5 w-full max-w-[560px]" /> : null}
+          {/* Pengguna lama: "Hari ini" tepat di bawah tombol Lanjutkan, sebelum bola dunia (masuk lipatan pertama). */}
+          {glance ? <TodayStrip glance={glance} className="mt-8 w-full max-w-[980px]" /> : null}
+        </Hero>
+        <CategoryMarquee />
 
-          <TrackList tracks={TRACKS} glanceTrackId={PRIMARY?.id} glance={glance} onOpen={(track) => go(trackRoute(track))} />
-        </main>
+        <BelowBoundary key={belowAttempt} onRetry={retryBelow}>
+          <Suspense fallback={<BelowFallback />}>
+            <LandingBelow glance={glance} onStart={openPrimary} onReady={onBelowReady} />
+          </Suspense>
+        </BelowBoundary>
+      </main>
 
-        <footer className="border-t border-slate-800/80 pt-5 text-sm text-slate-400">
-          <p>
-            Progres tersimpan hanya di browser ini.
-            {PRIMARY ? (
-              <>
-                {' '}
-                <a
-                  href={formatRoute(trackRoute(PRIMARY, 'progres'))}
-                  onClick={() => {
-                    if (showIntro) markIntroSeen();
-                  }}
-                  className={`${LINK} whitespace-nowrap`}
-                  data-testid="home-backup-link"
-                >
-                  Cadangkan progres
-                </a>
-              </>
-            ) : null}
-          </p>
-        </footer>
-      </div>
+      <Footer />
 
       <input
         ref={restore.inputRef}
         type="file"
         accept="application/json,.json"
         className="hidden"
-        aria-label="Pilih file cadangan progres"
+        aria-label={HOME.restore.inputLabel}
         data-testid="home-restore-file"
         onChange={restore.onFile}
       />
-    </div>
+    </LandingRoot>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/* Bagian kecil                                                        */
+/* Bagian bawah yang dimuat malas                                      */
 /* ------------------------------------------------------------------ */
 
-function StreakPill({ streak }: { streak: TrackGlance['streak'] | null }): JSX.Element {
-  if (streak === null) return <div className="h-9 w-24 shrink-0 animate-pulse rounded-lg bg-slate-800/70" aria-hidden />;
-  const lit = streak.active > 0;
-  return (
-    <div
-      title={`Streak harian — terbaik: ${streak.best} hari`}
-      className={`flex shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-sm font-semibold ${
-        lit ? 'border-orange-500/30 bg-orange-500/10 text-orange-300' : 'border-slate-700 bg-slate-800/60 text-slate-400'
-      }`}
-      data-testid="home-streak"
-    >
-      <Flame className="h-4 w-4" aria-hidden />
-      <span className="sr-only">Streak </span>
-      <span className="tabular-nums">{streak.active}</span>
-      <span className="text-xs opacity-80">hari</span>
-    </div>
-  );
+/**
+ * Ruang cadangan selama chunk bagian bawah diunduh: kira-kira setinggi isinya di tiap lebar layar, supaya footer tidak
+ * "naik" dulu lalu terdorong jauh ke bawah. Hanya hiasan — pembaca layar tidak perlu mendengarnya.
+ */
+function BelowFallback(): JSX.Element {
+  return <div aria-hidden className="min-h-[12500px] sm:min-h-[11000px] lg:min-h-[9000px]" data-testid="home-below-loading" />;
 }
 
-/** Kerangka selama ringkasan dimuat; tingginya mendekati kartu sesungguhnya supaya isi di bawahnya tidak melompat. */
-function HomeSkeleton(): JSX.Element {
-  return (
-    <div role="status" data-testid="home-skeleton">
-      <span className="sr-only">Memuat ringkasan belajar…</span>
-      <div className="h-64 animate-pulse rounded-2xl border border-slate-800 bg-slate-900/60 p-5 sm:h-56 sm:p-7" aria-hidden>
-        <div className="h-4 w-32 rounded bg-slate-800" />
-        <div className="mt-4 h-7 w-3/4 rounded bg-slate-800" />
-        <div className="mt-3 h-4 w-40 rounded bg-slate-800" />
-        <div className="mt-10 h-2 w-full rounded-full bg-slate-800" />
-      </div>
-    </div>
-  );
-}
+/**
+ * Bagian bawah gagal (chunk tidak terunduh: jaringan putus, atau tab lama setelah versi baru terbit): bagian atas —
+ * tombol utama, "Hari ini", pemulihan cadangan — tetap berfungsi, jadi Beranda tidak dimatikan. Kegagalannya TIDAK
+ * didiamkan: satu baris menjelaskan apa yang terjadi dan menawarkan mencoba lagi (induk memasang ulang batas ini
+ * dengan komponen lazy baru) atau memuat ulang halaman.
+ */
+class BelowBoundary extends Component<{ children: ReactNode; onRetry: () => void }, { failed: boolean }> {
+  override state: { failed: boolean } = { failed: false };
 
-function GlanceError({ track, onOpen, primaryRef }: { track: TrackManifest | undefined; onOpen: () => void; primaryRef: RefObject<HTMLButtonElement> }): JSX.Element {
-  return (
-    <section role="alert" className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 sm:p-7" data-testid="home-glance-error">
-      <h2 className="text-lg font-semibold text-slate-100">Ringkasan belajar tidak bisa dimuat</h2>
-      <p className="mt-1.5 text-sm text-slate-400">Progresmu tidak terpengaruh. Coba muat ulang halaman{track ? ', atau langsung buka jalurnya' : ''}.</p>
-      <div className="mt-4 flex flex-wrap gap-2">
-        {track ? (
-          <button ref={primaryRef} type="button" onClick={onOpen} className={BTN_PRIMARY} data-testid="home-primary">
-            Buka jalur {track.title}
-          </button>
-        ) : null}
-        <button type="button" onClick={() => window.location.reload()} className={BTN_SECONDARY}>
-          Muat ulang
-        </button>
-      </div>
-    </section>
-  );
-}
+  static getDerivedStateFromError(): { failed: boolean } {
+    return { failed: true };
+  }
 
-function QuarantineAlert({ at, onRestore, onDismiss }: { at: string; onRestore: () => void; onDismiss: () => void }): JSX.Element {
-  const when = new Date(at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
-  return (
-    <div role="alert" className="rounded-xl border border-rose-500/30 bg-rose-500/[0.07] p-4" data-testid="home-quarantine">
-      <div className="flex items-start gap-3">
-        <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-rose-300" aria-hidden />
-        <div className="min-w-0 flex-1">
-          <h2 className="text-sm font-semibold text-rose-100">Sebagian data progres tersimpan tidak bisa dibaca</h2>
-          <p className="mt-1 text-sm leading-relaxed text-rose-100/90">
-            Terdeteksi pada {when}. Salinan aslinya sudah diamankan di browser ini dan tidak dihapus, tetapi bagian itu sekarang mulai dari kosong.
-            Sebaiknya pulihkan dari file cadangan bila punya.
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button type="button" onClick={onRestore} className={BTN_SECONDARY} data-testid="home-quarantine-restore">
-              Pulihkan dari file cadangan
-            </button>
-            <button type="button" onClick={onDismiss} className={BTN_SECONDARY} data-testid="home-quarantine-dismiss">
-              Mengerti, tutup
-            </button>
+  override render(): ReactNode {
+    if (!this.state.failed) return this.props.children;
+    return (
+      <Container className="py-12">
+        <div role="alert" className="mx-auto flex max-w-[720px] flex-col items-start gap-3 rounded-q border border-q-amber/60 bg-q-amber-soft p-4 text-q-ink sm:flex-row sm:items-center sm:gap-4" data-testid="home-below-error">
+          <p className="m-0 flex-1 text-[15px] leading-relaxed">{HOME.belowError.text}</p>
+          <div className="flex shrink-0 flex-wrap gap-2 pb-1">
+            <Button3D size="sm" onClick={this.props.onRetry} data-testid="home-below-retry">
+              {HOME.belowError.retry}
+            </Button3D>
+            <Button3D size="sm" variant="outline" onClick={() => window.location.reload()}>
+              {HOME.glanceError.reload}
+            </Button3D>
           </div>
         </div>
-      </div>
-    </div>
-  );
+      </Container>
+    );
+  }
+}
+
+/** Jalur `trackId` pernah menyimpan sesuatu di browser ini? (Hanya petunjuk tata letak; kebenarannya datang dari glance.) */
+function hasStoredData(trackId: string): boolean {
+  const storage = browserStorage();
+  if (!storage) return false;
+  try {
+    // Kunci jalur memakai awalan beku per jalur (lihat lib/storageKeys.ts); cukup satu yang cocok.
+    const prefix = TRACK_KEY_PREFIX[trackId];
+    if (prefix === undefined) return false;
+    for (let index = 0; index < storage.length; index += 1) {
+      if (storage.key(index)?.startsWith(prefix) === true) return true;
+    }
+  } catch {
+    /* storage diblokir */
+  }
+  return false;
 }

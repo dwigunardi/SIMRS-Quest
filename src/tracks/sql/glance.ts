@@ -1,24 +1,28 @@
 /**
  * Ringkasan jalur SQL untuk Beranda, dihitung langsung dari storage tanpa me-mount jalurnya (tanpa mesin SQL).
  *
- * Fungsi murni dan HANYA MEMBACA: tidak menulis apa pun (termasuk karantina — itu tugas pemuat aplikasi), tidak
- * melempar, dan aman dijalankan di Node (scripts/verify). Seluruh aturan dipinjam dari modul yang juga dipakai
- * aplikasi (parser, resume, jadwal ulang, peta kelemahan, rank, streak), jadi angka di Beranda selalu sama dengan
- * angka di dalam jalur.
+ * `glance` fungsi murni dan HANYA MEMBACA: tidak menulis apa pun (termasuk karantina), tidak melempar, dan aman
+ * dijalankan di Node (scripts/verify). Seluruh aturan dipinjam dari modul yang juga dipakai aplikasi (parser, resume,
+ * jadwal ulang, peta kelemahan, rank, streak), jadi angka di Beranda selalu sama dengan angka di dalam jalur.
+ *
+ * `guard` adalah langkah TERPISAH yang dijalankan Beranda sekali sebelum glance pertama: ia mengkarantina nilai
+ * tersimpan yang tidak terbaca dengan aturan yang sama seperti pemuat di dalam jalur (parser + "kosong setelah
+ * dibersihkan"), supaya peringatannya tampil sejak Beranda dibuka — tanpa menunggu pengguna masuk ke jalur.
  */
 import { ARTICLES } from '../../data/materi';
 import { MISSIONS, TIERS } from '../../data/missions';
-import { parseMistakeLog } from '../../hooks/useMistakes';
-import { isAnswered, isExamMission, parseSession } from '../../lib/exam';
+import { parseArticleReads } from '../../hooks/useArticleReads';
+import { isEmptyLog, parseMistakeLog } from '../../hooks/useMistakes';
+import { isAnswered, isExamMission, parseHistory, parseSession } from '../../lib/exam';
 import { MISTAKE_INFO } from '../../lib/mistakes';
 import { createEmptyProgress, getActiveStreak, getCompletedCount, parseProgress, toLocalDateKey } from '../../lib/progress';
 import { getRank } from '../../lib/ranks';
 import { findPendingMission, pickInitialMissionId } from '../../lib/resume';
 import { dueItems, parseDeck } from '../../lib/review';
-import { lastQuarantinedAt } from '../../lib/storageGuard';
-import { EXAM_SESSION_KEY, MISTAKES_KEY, PROGRESS_KEY, REVIEW_KEY, SQL_GUARDED_KEYS } from '../../lib/storageKeys';
+import { lastQuarantinedAt, readGuarded } from '../../lib/storageGuard';
+import { ARTICLE_READS_KEY, EXAM_HISTORY_KEY, EXAM_SESSION_KEY, MISTAKES_KEY, PROGRESS_KEY, REVIEW_KEY, SQL_GUARDED_KEYS } from '../../lib/storageKeys';
 import { buildWeaknessReport } from '../../lib/weakness';
-import type { GlanceFn, TrackGlance } from '../../platform/tracks';
+import type { GlanceFn, GuardFn, TrackGlance } from '../../platform/tracks';
 import type { Mission } from '../../types';
 
 type Reader = Pick<Storage, 'getItem'>;
@@ -50,6 +54,20 @@ function tierLabel(mission: Mission): string {
 function resumeOf(mission: Mission | undefined): TrackGlance['resume'] {
   return mission ? { missionId: mission.id, order: mission.order, title: mission.title, tierLabel: tierLabel(mission) } : null;
 }
+
+/**
+ * Karantina nilai yang tidak terbaca di SETIAP kunci yang dijaga (SQL_GUARDED_KEYS), dengan parser dan aturan "kosong"
+ * yang sama seperti pemuatnya masing-masing: loadProgress, readStoredMistakes, readStoredDeck, readStoredArticleReads,
+ * readStoredHistory. scripts/verify/platform.ts memeriksa bahwa daftar di sini mencakup semua kunci yang dijaga.
+ * readGuarded tidak pernah melempar dan tidak menyentuh kunci aslinya.
+ */
+export const guard: GuardFn = (storage, now) => {
+  readGuarded(storage, PROGRESS_KEY, (raw) => parseProgress(JSON.parse(raw)), undefined, now);
+  readGuarded(storage, MISTAKES_KEY, parseMistakeLog, isEmptyLog, now);
+  readGuarded(storage, ARTICLE_READS_KEY, parseArticleReads, (ids) => ids.size === 0, now);
+  readGuarded(storage, EXAM_HISTORY_KEY, (raw) => parseHistory(JSON.parse(raw)), (records) => records.length === 0, now);
+  readGuarded(storage, REVIEW_KEY, (raw) => parseDeck(JSON.parse(raw)), (deck) => Object.keys(deck).length === 0, now);
+};
 
 export const glance: GlanceFn = (storage, now) => {
   const progress = parseProgress(readJson(storage, PROGRESS_KEY)) ?? createEmptyProgress();
