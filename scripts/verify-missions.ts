@@ -26,6 +26,9 @@
  * 18. Autocomplete editor  — scripts/verify/sqlComplete.ts
  * 19. Landing (Beranda)    — scripts/verify/landing.ts (angka & contoh di src/platform/landing/lib/content.ts sama dengan
  *                            data sebenarnya, kata terlarang, kontras warna WCAG AA, berkas landing tetap ringan)
+ * 20. Halaman jalur        — scripts/verify/courses.ts (katalog '#/landing' & landing per jalur: data = registri,
+ *                            silabus SQL = kurikulum, jalur 'segera' jujur, tautan dikenal router, meta & JSON-LD,
+ *                            pembaca progres hanya membaca, halaman dimuat malas & tidak menyentuh mesin SQL)
  *
  * Kegagalan → exit code 1. Peringatan (⚠) hanya informasi.
  */
@@ -46,6 +49,7 @@ import { verifyPerfLab } from './verify/perfLab';
 import { verifyFixtures } from './verify/fixtures';
 import { verifyPlatform } from './verify/platform';
 import { verifyLanding } from './verify/landing';
+import { verifyCourses } from './verify/courses';
 import { verifyConceptMission, verifyInjectionMission } from './verify/labMissions';
 import { failures, guard, guardAsync, section, warnings } from './verify/report';
 import { verifyPlanTree } from './verify/planTree';
@@ -142,6 +146,9 @@ async function main(): Promise<void> {
 
   section('Landing (isi Beranda benar, kontras warna, tetap ringan)');
   guard('landing', () => verifyLanding(SQL));
+
+  section('Halaman jalur (katalog & landing per jalur)');
+  guard('halaman jalur', verifyCourses);
 
   if (warnings.length > 0) console.warn(`\n⚠ ${warnings.length} peringatan.`);
   if (failures.length > 0) {

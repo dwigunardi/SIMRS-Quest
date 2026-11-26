@@ -118,6 +118,8 @@ export type IconName =
 /** Tujuan di dalam aplikasi (hash router: src/platform/router.ts). */
 export const ROUTES = {
   home: '#/',
+  /** Katalog semua jalur. Landing tiap jalur: LandingTrack.landingHref. */
+  catalog: '#/landing',
   sql: '#/sql',
   missions: '#/sql/misi',
   articles: '#/sql/materi',
@@ -161,8 +163,10 @@ export interface LandingTrack {
   tagline: string;
   /** Apa yang dikerjakan di jalur ini (untuk panel tab). */
   summary: string;
-  /** Tujuan tautan; hanya jalur yang tersedia. */
+  /** Tujuan tautan ke jalurnya sendiri; hanya jalur yang tersedia. */
   href?: string;
+  /** Halaman landing jalur ('#/landing/<id>') — ada untuk SEMUA jalur, termasuk yang 'segera'. */
+  landingHref: string;
 }
 
 export const TRACKS: readonly LandingTrack[] = [
@@ -175,6 +179,7 @@ export const TRACKS: readonly LandingTrack[] = [
     summary:
       'Menulis query di database rumah sakit: menyaring, JOIN, agregasi, window function, transaksi, index, keamanan, sampai merancang tabel.',
     href: ROUTES.sql,
+    landingHref: '#/landing/sql',
   },
   {
     id: 'js',
@@ -183,6 +188,7 @@ export const TRACKS: readonly LandingTrack[] = [
     icon: 'braces',
     tagline: 'Logika di balik layar pendaftaran dan billing.',
     summary: 'Dasar bahasa sampai tipe yang ketat, dengan kasus mengolah data pasien dan menghitung tagihan.',
+    landingHref: '#/landing/js',
   },
   {
     id: 'rest',
@@ -191,6 +197,7 @@ export const TRACKS: readonly LandingTrack[] = [
     icon: 'globe',
     tagline: 'Membuka data SIMRS lewat endpoint yang rapi.',
     summary: 'Merancang dan memanggil API di atas database yang sama: resource, metode, kode status, validasi, dan paginasi.',
+    landingHref: '#/landing/rest',
   },
   {
     id: 'react',
@@ -199,6 +206,7 @@ export const TRACKS: readonly LandingTrack[] = [
     icon: 'atom',
     tagline: 'Antarmuka loket, antrean, dan rekam medis.',
     summary: 'Komponen, state, dan pengambilan data untuk layar rumah sakit, dari daftar pasien sampai formulir pendaftaran.',
+    landingHref: '#/landing/react',
   },
   {
     id: 'framework',
@@ -207,6 +215,7 @@ export const TRACKS: readonly LandingTrack[] = [
     icon: 'layers',
     tagline: 'Proyek utuh dengan framework sungguhan.',
     summary: 'Membangun modul SIMRS sebagai proyek nyata: struktur proyek, migrasi, dan pengujian.',
+    landingHref: '#/landing/framework',
   },
 ];
 
@@ -292,8 +301,16 @@ const NAV_ABOUT_NOTE: { icon: IconName; text: string } = {
 export const NAV = {
   ariaLabel: 'Navigasi utama',
   homeLabel: 'Ke awal halaman',
-  /** Isi menu "Jalur" = TRACKS; jalur 'segera' tampil tanpa tautan dengan chip SOON_LABEL. */
-  tracks: { label: 'Jalur' },
+  /** Nama tautan wordmark di halaman selain Beranda. */
+  homeLink: 'Ke Beranda',
+  /**
+   * Isi menu "Jalur" = TRACKS, masing-masing menaut ke landing-nya (landingHref); jalur 'segera' tetap berchip
+   * SOON_LABEL. Baris terakhir menaut ke katalog.
+   */
+  tracks: {
+    label: 'Jalur',
+    all: { label: 'Semua jalur', description: 'Lima jalur dan urutan belajar yang kami sarankan', href: ROUTES.catalog, icon: 'square-stack' as IconName },
+  },
   features: { label: 'Fitur', items: NAV_FEATURES },
   about: {
     label: 'Tentang',
@@ -307,6 +324,20 @@ export const NAV = {
   motion: { pause: 'Jeda animasi', resume: 'Jalankan animasi lagi' },
   mobile: { open: 'Buka menu', close: 'Tutup menu', title: 'Menu' },
   externalHint: '(buka di tab baru)',
+} as const;
+
+/**
+ * Layar sementara halaman katalog/landing jalur (dipakai shell — ikut bundel awal, jadi teksnya di sini, bukan di
+ * lib/pagesContent.ts yang dimuat malas).
+ */
+export const PAGE_SHELL = {
+  loading: 'Memuat halaman…',
+  error: {
+    title: 'Halaman ini gagal dimuat',
+    body: 'Periksa koneksi lalu muat ulang. Progres yang sudah tersimpan tidak terpengaruh.',
+    reload: 'Muat ulang',
+    home: 'Ke Beranda',
+  },
 } as const;
 
 /* ------------------------------------------------------------------ */
@@ -476,28 +507,30 @@ export interface MarqueeItem {
   label: string;
   icon: IconName;
   status: LandingTrackStatus;
+  /** Jalur pemilik topik ini (id di TRACKS); pill menaut ke landing jalur itu. Status harus sama dengan jalurnya. */
+  trackId: string;
 }
 
 const MARQUEE_ITEMS: readonly MarqueeItem[] = [
-  { label: 'SELECT', icon: 'table', status: 'tersedia' },
-  { label: 'JOIN', icon: 'git-merge', status: 'tersedia' },
-  { label: 'GROUP BY', icon: 'sigma', status: 'tersedia' },
-  { label: 'Subquery', icon: 'square-stack', status: 'tersedia' },
-  { label: 'CTE', icon: 'workflow', status: 'tersedia' },
-  { label: 'Window function', icon: 'rows', status: 'tersedia' },
-  { label: 'Transaksi', icon: 'arrow-left-right', status: 'tersedia' },
-  { label: 'Index', icon: 'gauge', status: 'tersedia' },
-  { label: 'SQL injection', icon: 'shield-alert', status: 'tersedia' },
-  { label: 'Desain tabel', icon: 'pencil-ruler', status: 'tersedia' },
-  { label: 'Fungsi tanggal', icon: 'calendar', status: 'tersedia' },
-  { label: 'JSON', icon: 'file-json', status: 'tersedia' },
-  { label: 'JavaScript', icon: 'si-javascript', status: 'segera' },
-  { label: 'TypeScript', icon: 'si-typescript', status: 'segera' },
-  { label: 'REST API', icon: 'globe', status: 'segera' },
-  { label: 'React', icon: 'si-react', status: 'segera' },
-  { label: 'NestJS', icon: 'si-nestjs', status: 'segera' },
-  { label: 'Next.js', icon: 'si-nextdotjs', status: 'segera' },
-  { label: 'Laravel', icon: 'si-laravel', status: 'segera' },
+  { label: 'SELECT', icon: 'table', status: 'tersedia', trackId: 'sql' },
+  { label: 'JOIN', icon: 'git-merge', status: 'tersedia', trackId: 'sql' },
+  { label: 'GROUP BY', icon: 'sigma', status: 'tersedia', trackId: 'sql' },
+  { label: 'Subquery', icon: 'square-stack', status: 'tersedia', trackId: 'sql' },
+  { label: 'CTE', icon: 'workflow', status: 'tersedia', trackId: 'sql' },
+  { label: 'Window function', icon: 'rows', status: 'tersedia', trackId: 'sql' },
+  { label: 'Transaksi', icon: 'arrow-left-right', status: 'tersedia', trackId: 'sql' },
+  { label: 'Index', icon: 'gauge', status: 'tersedia', trackId: 'sql' },
+  { label: 'SQL injection', icon: 'shield-alert', status: 'tersedia', trackId: 'sql' },
+  { label: 'Desain tabel', icon: 'pencil-ruler', status: 'tersedia', trackId: 'sql' },
+  { label: 'Fungsi tanggal', icon: 'calendar', status: 'tersedia', trackId: 'sql' },
+  { label: 'JSON', icon: 'file-json', status: 'tersedia', trackId: 'sql' },
+  { label: 'JavaScript', icon: 'si-javascript', status: 'segera', trackId: 'js' },
+  { label: 'TypeScript', icon: 'si-typescript', status: 'segera', trackId: 'js' },
+  { label: 'REST API', icon: 'globe', status: 'segera', trackId: 'rest' },
+  { label: 'React', icon: 'si-react', status: 'segera', trackId: 'react' },
+  { label: 'NestJS', icon: 'si-nestjs', status: 'segera', trackId: 'framework' },
+  { label: 'Next.js', icon: 'si-nextdotjs', status: 'segera', trackId: 'framework' },
+  { label: 'Laravel', icon: 'si-laravel', status: 'segera', trackId: 'framework' },
 ];
 
 export const MARQUEE = {
@@ -562,6 +595,8 @@ export const PATHS = {
     body: 'Belum ada tanggal rilisnya. Sementara itu, jalur SQL sudah lengkap dan bisa langsung dikerjakan.',
     cta: 'Buka jalur SQL',
     href: ROUTES.sql,
+    /** Tautan ke landing jalur itu (LandingTrack.landingHref). */
+    plan: 'Lihat rencana jalur ini',
   },
 } as const;
 
@@ -574,6 +609,8 @@ export const EXPLORE = {
   lead: 'Dari SELECT pertama sampai Final Boss.',
   cta: 'Buka jalur SQL',
   href: ROUTES.sql,
+  /** Tombol kedua: katalog semua jalur. */
+  allTracks: { label: 'Lihat semua jalur', href: ROUTES.catalog },
   /** Keterangan peta mini: kotak = misi, belah ketupat = Boss (PATHS.roadmap.bossLabel). */
   legendMission: 'Misi',
 } as const;
@@ -1350,8 +1387,9 @@ export const CTA = {
 export const FOOTER = {
   tagline: 'Belajar membangun sistem informasi rumah sakit, satu misi demi satu misi.',
   github: { label: 'GitHub', href: GITHUB_URL },
-  /** Kolom "Jalur": isinya TRACKS (yang 'segera' tanpa tautan + chip). */
+  /** Kolom "Jalur": isinya TRACKS, menaut ke landing tiap jalur (yang 'segera' ditambah chip), lalu "Semua jalur". */
   tracksTitle: 'Jalur',
+  allTracks: { label: 'Semua jalur', href: ROUTES.catalog },
   helpTitle: 'Bantuan',
   help: {
     backup: { label: 'Cadangkan progres', href: ROUTES.progress },

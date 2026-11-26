@@ -41,9 +41,12 @@ export function CatalogStrip(): JSX.Element {
             {EXPLORE.title}
           </h2>
           <p className="m-0 text-base leading-relaxed text-q-band-soft">{EXPLORE.lead}</p>
-          <div className="mt-3 pb-1">
+          <div className="mt-3 flex flex-wrap gap-3 pb-1">
             <Button3D href={EXPLORE.href} variant="outline" size="md" data-testid="catalog-open">
               {EXPLORE.cta}
+            </Button3D>
+            <Button3D href={EXPLORE.allTracks.href} variant="outline" size="md" data-testid="catalog-all-tracks">
+              {EXPLORE.allTracks.label}
             </Button3D>
           </div>
         </div>

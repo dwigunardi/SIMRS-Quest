@@ -32,7 +32,7 @@ export function NavMenu({ ariaLabel, children, className }: NavMenuProps): JSX.E
 }
 
 const TOP_ITEM =
-  'group inline-flex h-9 items-center gap-1 rounded-q px-3 font-q-body text-sm font-bold text-q-ink transition-colors duration-150 hover:bg-q-muted data-[state=open]:bg-q-muted';
+  'group relative inline-flex h-9 items-center gap-1 rounded-q px-3 font-q-body text-sm font-bold text-q-ink transition-colors duration-150 hover:bg-q-muted data-[state=open]:bg-q-muted';
 
 export interface NavDropdownProps {
   label: string;
@@ -41,14 +41,17 @@ export interface NavDropdownProps {
   align?: 'start' | 'end';
   /** Kelas lebar panel (bawaan w-[340px]). */
   panelClassName?: string;
+  /** Halaman yang sedang dibuka termasuk menu ini (mis. katalog / landing jalur untuk menu "Jalur"): label diberi garis hijau. */
+  active?: boolean;
 }
 
-export function NavDropdown({ label, children, align = 'start', panelClassName }: NavDropdownProps): JSX.Element {
+export function NavDropdown({ label, children, align = 'start', panelClassName, active = false }: NavDropdownProps): JSX.Element {
   return (
     <NavigationMenu.Item className="relative">
-      <NavigationMenu.Trigger className={TOP_ITEM}>
+      <NavigationMenu.Trigger className={cn(TOP_ITEM, active ? 'text-q-primary-ink' : '')} data-active={active ? 'true' : undefined}>
         {label}
         <ChevronDown aria-hidden className="h-4 w-4 text-q-ink-soft transition-transform duration-200 group-data-[state=open]:rotate-180 motion-reduce:transition-none" />
+        {active ? <span aria-hidden className="absolute inset-x-3 bottom-0.5 h-[3px] rounded-q-pill bg-q-primary" /> : null}
       </NavigationMenu.Trigger>
       <NavigationMenu.Content
         className={cn(
@@ -75,6 +78,8 @@ export interface NavDropdownLinkProps {
   badge?: ReactNode;
   /** Tautan keluar aplikasi: dibuka di tab baru. */
   external?: boolean;
+  /** Tautan ke halaman yang sedang dibuka: aria-current="page" + latar mint. */
+  current?: boolean;
 }
 
 function RowBody({ title, description, icon, badge, external, muted }: NavDropdownLinkProps & { muted: boolean }): JSX.Element {
@@ -104,7 +109,7 @@ function RowBody({ title, description, icon, badge, external, muted }: NavDropdo
 
 /** Satu baris di panel menu: tautan (dengan href) atau baris redup tanpa tautan (tanpa href). */
 export function NavDropdownLink(props: NavDropdownLinkProps): JSX.Element {
-  const { href, external } = props;
+  const { href, external, current = false } = props;
   if (href === undefined) {
     return (
       <li>
@@ -121,7 +126,8 @@ export function NavDropdownLink(props: NavDropdownLinkProps): JSX.Element {
           href={href}
           target={external === true ? '_blank' : undefined}
           rel={external === true ? 'noreferrer noopener' : undefined}
-          className="flex items-start gap-3 rounded-q p-2.5 no-underline transition-colors duration-150 hover:bg-q-muted"
+          aria-current={current ? 'page' : undefined}
+          className={cn('flex items-start gap-3 rounded-q p-2.5 no-underline transition-colors duration-150', current ? 'bg-q-tint' : 'hover:bg-q-muted')}
         >
           <RowBody {...props} muted={false} />
         </a>

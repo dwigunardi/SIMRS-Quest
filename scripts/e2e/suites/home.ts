@@ -1,7 +1,8 @@
 /**
  * Beranda & shell platform: Beranda yang ringan (tanpa mesin SQL), pindah Beranda ↔ jalur dengan "jalur hangat"
  * (draf, timer ujian, dan kumpul otomatis tetap hidup di balik Beranda), riwayat browser dua arah, ringkasan pengguna
- * lama, tautan masuk ('#/sql/ujian' dkk.), pengalihan rute yang tidak ada, karantina data rusak, pulihkan cadangan,
+ * lama, tautan masuk ('#/sql/ujian' dkk.), pengalihan rute yang tidak ada (jalur 'segera' → landing-nya; katalog &
+ * landing jalur sendiri diuji suite 'courses'), karantina data rusak, pulihkan cadangan,
  * tema terang/gelap yang hanya milik Beranda, interaksi landing (tab, accordion, mockup, menu layar sempit & lebar,
  * korsel), gerak (jeda animasi, gerak dikurangi, halaman yang benar-benar diam), posisi gulir, dan dua kegagalan
  * unduhan (ringkasan progres, bagian bawah halaman).
@@ -13,6 +14,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { MISSIONS } from '../../../src/data/missions';
 import { PROGRESS_KEY, progressWith, type SuiteContext } from '../context';
+import { AT_HOME_URL, BACKDROP, HOME_READY, LANDING_PAGE, RESOURCE_BUFFER, TRACK_READY, WASM_REQUESTS, kit, tid, type Backdrop, type Kit } from '../kit';
 
 const SESSION_KEY = 'simrs-sql-quest:exam-session:v1';
 const EXAMS_KEY = 'simrs-sql-quest:exams:v1';
@@ -76,25 +78,6 @@ function localDateKey(date: Date): string {
 
 const SEEN_INTRO = { [INTRO_KEY]: '2026-11-01T00:00:00.000Z' };
 
-/* ------------------------------------------------------------------ */
-/* Potongan ekspresi halaman                                           */
-/* ------------------------------------------------------------------ */
-
-const HOME_READY = `__t.all('[data-testid="home"][data-ready="true"]').length > 0`;
-const TRACK_READY = `(__t.all('[aria-label="Mode aplikasi"] button').length > 0 && __t.all('[data-testid="home"]').length === 0)`;
-const AT_HOME_URL = `['', '#', '#/'].includes(location.hash)`;
-/** Elemen terlihat ber-data-testid tertentu (atau undefined). */
-const tid = (id: string) => `__t.all('[data-testid="${id}"]')[0]`;
-
-/**
- * Permintaan biner WebAssembly sungguhan. Di server dev, `sql-wasm.wasm?import&url` adalah modul JS kecil yang hanya
- * mengekspor URL (ikut terambil saat chunk jalur dipramuat) — itu BUKAN mesin SQL, jadi tidak dihitung.
- *
- * Buffer Resource Timing bawaan hanya 250 entri; server dev memuat ratusan modul sehingga permintaan yang datang
- * belakangan (justru .wasm) tidak tercatat. Suite ini memperbesar buffer itu sejak dokumen dibuat (RESOURCE_BUFFER).
- */
-const RESOURCE_BUFFER = 5000;
-
 /**
  * Penghitung requestAnimationFrame, dipasang sebelum modul apa pun dimuat (framer-motion menyimpan rujukan
  * requestAnimationFrame saat modulnya dievaluasi, jadi membungkusnya belakangan tidak akan terhitung).
@@ -102,194 +85,6 @@ const RESOURCE_BUFFER = 5000;
 const RAF_COUNTER = `(() => { const raf = window.requestAnimationFrame.bind(window); window.__rafCount = 0; window.requestAnimationFrame = (cb) => { window.__rafCount += 1; return raf(cb); }; })();`;
 /** Banyaknya frame yang diminta halaman selama `ms`. Halaman yang diam meminta 0. */
 const rafDuring = (ms: number) => `(async () => { const before = window.__rafCount; await new Promise(r => setTimeout(r, ${ms})); return window.__rafCount - before; })()`;
-const WASM_REQUESTS = `performance.getEntriesByType('resource').map(e => new URL(e.name)).filter(u => u.pathname.endsWith('.wasm') && !/[?&]import\\b/.test(u.search)).map(u => u.pathname.split('/').pop())`;
-
-/**
- * Seberapa gelap layar yang sedang tampil, dihitung dari warna latar TERHITUNG (luminans relatif: 0 = hitam, 1 = putih):
- * `body` = latar <body>; `dark` = bagian titik contoh (kisi 8×6 di seluruh layar) yang latar padat terdekatnya gelap;
- * `brightest` = titik paling terang. Tombol berwarna boleh ada, tetapi permukaan layar jalur harus gelap.
- */
-const BACKDROP = `(() => {
-  const parse = (color) => { const n = (color.match(/[\\d.]+/g) ?? []).map(Number); const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return { alpha: n.length > 3 ? n[3] : 1, lum: 0.2126 * f(n[0] ?? 0) + 0.7152 * f(n[1] ?? 0) + 0.0722 * f(n[2] ?? 0) }; };
-  const solid = (el) => { for (let e = el; e; e = e.parentElement) { const c = parse(getComputedStyle(e).backgroundColor); if (c.alpha > 0.9) return c.lum; } return 1; };
-  const lums = [];
-  for (let ix = 0; ix < 8; ix += 1) for (let iy = 0; iy < 6; iy += 1) lums.push(solid(document.elementFromPoint(innerWidth * (ix + 0.5) / 8, innerHeight * (iy + 0.5) / 6)));
-  const bodyColor = getComputedStyle(document.body).backgroundColor;
-  return { body: parse(bodyColor).lum, bodyColor, dark: lums.filter(l => l < 0.1).length / lums.length, brightest: Math.max(...lums) };
-})()`;
-
-interface Backdrop {
-  body: number;
-  bodyColor: string;
-  dark: number;
-  brightest: number;
-}
-
-interface KeySpec {
-  key: string;
-  code: string;
-  vk: number;
-  text?: string;
-}
-const KEYS = {
-  Enter: { key: 'Enter', code: 'Enter', vk: 13, text: '\r' },
-  Space: { key: ' ', code: 'Space', vk: 32, text: ' ' },
-  Escape: { key: 'Escape', code: 'Escape', vk: 27 },
-  ArrowRight: { key: 'ArrowRight', code: 'ArrowRight', vk: 39 },
-  ArrowDown: { key: 'ArrowDown', code: 'ArrowDown', vk: 40 },
-  Tab: { key: 'Tab', code: 'Tab', vk: 9 },
-} satisfies Record<string, KeySpec>;
-
-/* ------------------------------------------------------------------ */
-/* Alat bantu                                                          */
-/* ------------------------------------------------------------------ */
-
-function kit(t: SuiteContext) {
-  const send = (method: string, params: Record<string, unknown> = {}) => t.browser.send(method, params);
-
-  /** Tunggu sampai ekspresi halaman bernilai benar. */
-  const waitFor = (expr: string, ms = 10_000) =>
-    t.evaluate<boolean>(
-      `(async () => { const t0 = Date.now(); while (Date.now() - t0 < ${ms}) { try { if (${expr}) return true; } catch (e) { /* halaman sedang berganti */ } await new Promise(r => setTimeout(r, 50)); } return false; })()`,
-    );
-
-  const text = (id: string) => t.evaluate<string>(`(${tid(id)}?.innerText ?? '').replace(/\\s+/g, ' ').trim()`);
-  const shown = (id: string) => t.evaluate<boolean>(`!!${tid(id)}`);
-  const click = (id: string) => t.evaluate(`(() => { const el = ${tid(id)}; if (!el) throw new Error('tidak terlihat: ${id}'); el.click(); return true; })()`);
-  const hash = () => t.evaluate<string>(`location.hash`);
-  const stored = <T>(key: string) => t.evaluate<T | null>(`JSON.parse(localStorage.getItem(${JSON.stringify(key)}) ?? 'null')`);
-  /** Seluruh isi localStorage sebagai satu teks, untuk memastikan "tidak ada yang berubah". */
-  const snapshot = () => t.evaluate<string>(`JSON.stringify(Object.entries(localStorage).sort(([a], [b]) => (a < b ? -1 : 1)))`);
-
-  const waitHome = (ms = 30_000) => waitFor(`${HOME_READY} && ${AT_HOME_URL}`, ms);
-  const waitTrack = (ms = 40_000) => waitFor(TRACK_READY, ms);
-
-  /** Halaman dimuat ulang oleh aplikasi sendiri (mis. setelah memulihkan cadangan). */
-  const afterAppReload = async () => {
-    await t.sleep(500);
-    await t.browser.waitForLoad();
-    await t.installHelpers();
-    return waitFor(`${HOME_READY} || ${TRACK_READY}`, 30_000);
-  };
-
-  /** Seperti t.fresh, tetapi nilai storage ditulis MENTAH (untuk data rusak yang bukan JSON). */
-  const freshRaw = async (raw: Record<string, string>, route: string) => {
-    await t
-      .evaluate(
-        `localStorage.clear(); sessionStorage.clear(); ${Object.entries(raw)
-          .map(([k, v]) => `localStorage.setItem(${JSON.stringify(k)}, ${JSON.stringify(v)});`)
-          .join(' ')} history.replaceState(null, '', location.pathname + location.search + ${JSON.stringify(route)}); location.reload(); true`,
-      )
-      .catch(() => undefined);
-    return afterAppReload();
-  };
-
-  /** Klik dengan mouse sungguhan pada elemen hasil `elementExpr` (digulir ke tengah layar lebih dulu). */
-  const mouseClick = async (elementExpr: string): Promise<boolean> => {
-    const found = await t.evaluate<boolean>(`(() => { const el = ${elementExpr}; if (!el) return false; el.scrollIntoView({ block: 'center', behavior: 'instant' }); return true; })()`);
-    if (!found) return false;
-    await t.sleep(450); // animasi masuk (geser 24px) selesai dulu supaya titik kliknya tidak meleset
-    const p = await t.evaluate<{ x: number; y: number } | null>(`(() => { const el = ${elementExpr}; if (!el) return null; const r = el.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })()`);
-    if (!p) return false;
-    await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: p.x, y: p.y });
-    await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: p.x, y: p.y, button: 'left', clickCount: 1 });
-    await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: p.x, y: p.y, button: 'left', clickCount: 1 });
-    return true;
-  };
-
-  /** Tekan satu tombol keyboard sungguhan (menuju elemen yang sedang terfokus). */
-  const press = async (name: keyof typeof KEYS) => {
-    const spec: KeySpec = KEYS[name];
-    const base = { key: spec.key, code: spec.code, windowsVirtualKeyCode: spec.vk, nativeVirtualKeyCode: spec.vk };
-    await send('Input.dispatchKeyEvent', spec.text === undefined ? { type: 'rawKeyDown', ...base } : { type: 'keyDown', ...base, text: spec.text, unmodifiedText: spec.text });
-    await send('Input.dispatchKeyEvent', { type: 'keyUp', ...base });
-  };
-
-  /** Ketik huruf satu per satu seperti pengguna (memicu autocomplete editor). */
-  const typeLetters = async (letters: string) => {
-    for (const ch of letters) {
-      const vk = ch.toUpperCase().charCodeAt(0);
-      const base = { key: ch, code: `Key${ch.toUpperCase()}`, windowsVirtualKeyCode: vk, nativeVirtualKeyCode: vk };
-      await send('Input.dispatchKeyEvent', { type: 'keyDown', ...base, text: ch, unmodifiedText: ch });
-      await send('Input.dispatchKeyEvent', { type: 'keyUp', ...base });
-    }
-  };
-
-  const viewport = async (width: number, height: number) => {
-    await send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: width < 700 });
-    await t.sleep(300);
-  };
-  const resetViewport = async () => {
-    await send('Emulation.clearDeviceMetricsOverride');
-    await t.sleep(300);
-  };
-
-  /** Pulang lewat tombol Beranda di header jalur. */
-  const headerHome = async () => {
-    await t.evaluate(`(() => { const b = __t.all('button[aria-label="Beranda"]')[0]; if (!b) throw new Error('tombol Beranda di header jalur tidak terlihat'); b.click(); return true; })()`);
-    return waitHome();
-  };
-
-  /** Keadaan jalur yang "hangat" di balik Beranda: harus tersembunyi seluruhnya dan tidak memegang fokus. */
-  const hiddenTrack = () =>
-    t.evaluate<{ host: boolean; hidden: boolean; visible: number; focusInside: boolean; popups: number; strays: string[] }>(`(() => {
-      const host = document.querySelector('[data-testid="track-host"]');
-      const strays = [...document.body.children].filter(e => e.id !== 'root' && !['SCRIPT', 'STYLE'].includes(e.tagName) && __t.visible(e) && e.getBoundingClientRect().width > 1).map(e => e.tagName.toLowerCase() + (e.getAttribute('role') ? '[' + e.getAttribute('role') + ']' : ''));
-      return {
-        host: !!host,
-        hidden: !!host && host.hidden,
-        visible: host ? [host, ...host.querySelectorAll('*')].filter(__t.visible).length : 0,
-        focusInside: !!host && host.contains(document.activeElement),
-        popups: __t.all('[aria-label="Saran autocomplete"]').length,
-        strays,
-      };
-    })()`);
-
-  /** Pilih file di <input type="file"> Beranda (pemilih file asli tidak bisa dibuka di headless). */
-  const pickFile = (content: string, name: string) =>
-    t.evaluate(`(() => {
-      const input = document.querySelector('[data-testid="home-restore-file"]');
-      const dt = new DataTransfer();
-      dt.items.add(new File([${JSON.stringify(content)}], ${JSON.stringify(name)}, { type: 'application/json' }));
-      input.files = dt.files;
-      input.dispatchEvent(new Event('change', { bubbles: true }));
-      return true;
-    })()`);
-
-  /**
-   * Pesan console yang MEMANG diharapkan selama sebuah langkah (mis. React melaporkan chunk yang sengaja diblokir):
-   * jalankan `run`, lalu pastikan setiap pesan baru cocok dengan `allowed` dan buang dari daftar — pesan lain tetap
-   * tinggal dan menggagalkan pemeriksaan console di akhir suite. Mengembalikan pesan yang dibuang.
-   */
-  const expectingConsole = async (allowed: RegExp, run: () => Promise<void>): Promise<string[]> => {
-    const problems = t.browser.problems;
-    const start = problems.length;
-    await run();
-    await t.sleep(150);
-    const fresh = problems.splice(start);
-    problems.push(...fresh.filter((line) => !allowed.test(line)));
-    return fresh.filter((line) => allowed.test(line));
-  };
-
-  /** Muat Beranda TANPA menunggu data-ready (untuk keadaan gagal yang memang tidak pernah "siap"). */
-  const loadHomeLoosely = async (storage: Record<string, unknown> = {}) => {
-    await t
-      .evaluate(
-        `localStorage.clear(); sessionStorage.clear(); ${Object.entries(storage)
-          .map(([key, value]) => `localStorage.setItem(${JSON.stringify(key)}, ${JSON.stringify(JSON.stringify(value))});`)
-          .join(' ')} history.replaceState(null, '', location.pathname + location.search + '#/'); location.reload(); true`,
-      )
-      .catch(() => undefined);
-    await t.sleep(400);
-    await t.browser.waitForLoad();
-    await t.installHelpers();
-    return waitFor(`__t.all('[data-testid="home"]').length > 0`, 20_000);
-  };
-
-  return { send, waitFor, text, shown, click, hash, stored, snapshot, waitHome, waitTrack, afterAppReload, freshRaw, mouseClick, press, typeLetters, viewport, resetViewport, headerHome, hiddenTrack, pickFile, expectingConsole, loadHomeLoosely };
-}
-
-type Kit = ReturnType<typeof kit>;
 
 /* ------------------------------------------------------------------ */
 /* 1–3, 12. Pengguna baru: Beranda ringan → jalur → pulang (hangat)    */
@@ -592,7 +387,6 @@ async function redirects(t: SuiteContext, k: Kit): Promise<void> {
   const cases: ReadonlyArray<{ route: string; echo: string; reason: RegExp }> = [
     { route: '#/tidak-ada/sama-sekali', echo: 'tidak-ada', reason: /tidak ditemukan/i },
     { route: '#/profil', echo: 'profil', reason: /belum tersedia/i },
-    { route: '#/react', echo: 'react', reason: /belum tersedia/i },
   ];
   for (const c of cases) {
     await t.fresh({}, c.route);
@@ -609,11 +403,32 @@ async function redirects(t: SuiteContext, k: Kit): Promise<void> {
   await t.evaluate(`${tid('home-notice')}.querySelector('button').click(); true`);
   t.check('pemberitahuan bisa ditutup', await k.waitFor(`!${tid('home-notice')}`, 3000));
 
+  // Jalur 'segera' dibuka langsung: dialihkan (replace) ke landing-nya, tanpa pemberitahuan, dengan judul tab halaman itu.
+  await t.fresh({}, '#/react');
+  const soonLanding = await k.waitFor(`location.hash === '#/landing/react' && !!${LANDING_PAGE('course')} && ${LANDING_PAGE('course')}.dataset.course === 'react'`, 10_000);
+  t.check(
+    "'#/react' (jalur segera) → '#/landing/react' tanpa pemberitahuan",
+    soonLanding && !(await k.shown('home-notice')) && (await t.evaluate<number>(`__t.all('[data-testid="home"], [data-testid="track-host"]').length`)) === 0,
+    await k.hash(),
+  );
+  const soonTitle = await t.evaluate<string>(`document.title`);
+  t.check('judul tab landing jalur segera', soonTitle === 'Belajar React — Jalur Interaktif Gratis | SIMRS Quest', soonTitle);
+  // Dari Beranda lewat tautan: tepat satu entri riwayat (pengalihannya mengganti entri tautan), Back kembali ke Beranda.
+  await k.send('Page.resetNavigationHistory');
+  await t.fresh({}, '#/');
+  const before = await t.evaluate<number>(`history.length`);
+  await t.evaluate(`location.hash = '#/js'; true`);
+  const jsLanding = await k.waitFor(`location.hash === '#/landing/js' && ${LANDING_PAGE('course')}?.dataset.course === 'js'`, 10_000);
+  const after = await t.evaluate<number>(`history.length`);
+  t.check("'#/js' dari Beranda → '#/landing/js' dengan satu entri riwayat (replace)", jsLanding && after - before === 1, `${before} → ${after}, hash=${await k.hash()}`);
+  await t.evaluate(`history.back(); true`);
+  t.check('Back dari landing jalur → Beranda', await k.waitHome(), await k.hash());
+
   // Dari dalam jalur ke rute yang tidak ada: dialihkan ke Beranda, dan Back kembali ke jalur (bukan terjebak).
   // history.length berhenti bertambah di 50 entri — di tab yang sudah lama dipakai, selisihnya selalu 0 dan pemeriksaan
   // di bawah tidak membedakan apa pun. Riwayat tab dikosongkan dulu (tersisa entri saat ini) supaya hitungannya berarti.
   await k.send('Page.resetNavigationHistory');
-  await t.fresh({}, '#/react');
+  await t.fresh({}, '#/');
   await k.click('home-primary');
   await k.waitTrack();
   const lengthBefore = await t.evaluate<number>(`history.length`);
@@ -621,7 +436,7 @@ async function redirects(t: SuiteContext, k: Kit): Promise<void> {
   await t.evaluate(`location.hash = '#/tidak-ada'; true`);
   const redirected = (await k.waitHome()) && (await k.waitFor(`!!${tid('home-notice')}`, 5000));
   const notice = await k.text('home-notice');
-  t.check('dari jalur ke rute tak dikenal → Beranda + pemberitahuan baru', redirected && notice.includes('tidak-ada') && !notice.includes('react'), notice);
+  t.check('dari jalur ke rute tak dikenal → Beranda + pemberitahuan baru', redirected && notice.includes('tidak-ada'), notice);
   const lengthAfter = await t.evaluate<number>(`history.length`);
   // Tepat satu entri untuk tautannya sendiri; pengalihannya MENGGANTI entri itu.
   t.check('pengalihan tidak menambah entri riwayat', lengthAfter - lengthBefore === 1, `${lengthBefore} → ${lengthAfter}`);
@@ -638,7 +453,7 @@ async function redirects(t: SuiteContext, k: Kit): Promise<void> {
   await t.evaluate(`document.getElementById('faq').scrollIntoView({ block: 'start', behavior: 'instant' }); true`);
   await t.sleep(300);
   const deep = await t.evaluate<number>(`window.scrollY`);
-  await t.evaluate(`location.hash = '#/react'; true`);
+  await t.evaluate(`location.hash = '#/tidak-ada'; true`);
   const inView = await k.waitFor(`(() => { const el = ${tid('home-notice')}; if (!el) return false; const r = el.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; })()`, 6000);
   t.check('pemberitahuan rute terlihat walau Beranda sedang digulir jauh ke bawah', deep > 2000 && inView && (await k.hash()) === '#/', `gulir awal=${Math.round(deep)} sekarang=${Math.round(await t.evaluate<number>(`window.scrollY`))}`);
 }
@@ -920,14 +735,18 @@ async function landing(t: SuiteContext, k: Kit): Promise<void> {
   const navTrigger = (label: string) => `__t.all('header nav button').find(b => b.innerText.trim() === ${JSON.stringify(label)})`;
   await t.evaluate(`scrollTo({ top: 0, behavior: 'instant' }); true`);
   await k.mouseClick(navTrigger('Jalur'));
-  const tracksOpen = await k.waitFor(`${navTrigger('Jalur')}?.getAttribute('aria-expanded') === 'true' && __t.all('header a[href="#/sql"]').length > 0`, 4000);
-  const tracksMenu = await t.evaluate<{ links: string[]; soon: number; disabled: number }>(`(() => { const root = __t.all('header a[href="#/sql"]')[0]?.closest('[data-state="open"]'); if (!root) return { links: [], soon: -1, disabled: -1 }; const rows = [...root.querySelectorAll('[aria-disabled="true"]')]; return { links: [...root.querySelectorAll('a[href]')].map(a => a.getAttribute('href')), soon: rows.filter(el => /Segera/.test(el.innerText)).length, disabled: rows.length }; })()`);
-  t.check('menu "Jalur": SQL bertautan, empat jalur lain tanpa tautan dan bertanda "Segera"', tracksOpen && tracksMenu.links.join() === '#/sql' && tracksMenu.soon === 4 && tracksMenu.disabled === 4, JSON.stringify(tracksMenu));
+  const tracksOpen = await k.waitFor(`${navTrigger('Jalur')}?.getAttribute('aria-expanded') === 'true' && __t.all('header a[href="#/landing/sql"]').length > 0`, 4000);
+  const tracksMenu = await t.evaluate<{ links: string[]; soon: number; disabled: number }>(`(() => { const root = __t.all('header a[href="#/landing/sql"]')[0]?.closest('[data-state="open"]'); if (!root) return { links: [], soon: -1, disabled: -1 }; const links = [...root.querySelectorAll('a[href]')]; return { links: links.map(a => a.getAttribute('href')), soon: links.filter(a => /Segera/.test(a.innerText)).length, disabled: root.querySelectorAll('[aria-disabled="true"]').length }; })()`);
+  t.check(
+    'menu "Jalur": setiap jalur menaut ke landing-nya (empat bertanda "Segera") + "Semua jalur" ke katalog',
+    tracksOpen && tracksMenu.links.join() === '#/landing/sql,#/landing/js,#/landing/rest,#/landing/react,#/landing/framework,#/landing' && tracksMenu.soon === 4 && tracksMenu.disabled === 0,
+    JSON.stringify(tracksMenu),
+  );
   // Jeda sewajar manusia sebelum Escape: Radix menjadwalkan "buka karena disorot" 80 ms setelah pointer masuk, dan
   // Escape yang datang SEBELUM jadwal itu jatuh akan dibuka lagi olehnya (pengguna sungguhan tidak secepat itu).
   await t.sleep(400);
   await k.press('Escape');
-  const tracksShut = await k.waitFor(`${navTrigger('Jalur')}?.getAttribute('aria-expanded') === 'false' && __t.all('header a[href="#/sql"]').length === 0`, 4000);
+  const tracksShut = await k.waitFor(`${navTrigger('Jalur')}?.getAttribute('aria-expanded') === 'false' && __t.all('header a[href="#/landing/sql"]').length === 0`, 4000);
   // Menu kedua dibuka dengan KEYBOARD (fokus + Enter): selain menguji akses keyboard, ini menghindari perlombaan
   // antara "terbuka karena disorot" dan "klik menutupnya lagi" pada Radix NavigationMenu.
   await t.sleep(300);
@@ -970,8 +789,10 @@ async function motion(t: SuiteContext, k: Kit): Promise<void> {
     t.evaluate<{ marquee: string; rotating: string; html: string | null; pressed: string | null }>(
       `({ marquee: __t.all('[data-marquee]').map(el => el.dataset.marquee).join(','), rotating: __t.all('h1 [data-rotating]')[0]?.dataset.rotating ?? '', html: document.documentElement.getAttribute('data-q-motion'), pressed: ${tid('motion-toggle')}?.getAttribute('aria-pressed') ?? null })`,
     );
-  /** Posisi (transform terhitung) semua bagian yang bergerak sendiri di layar pertama: pita, maskot, penanda bola dunia. */
-  const pose = `JSON.stringify([...document.querySelectorAll('[data-marquee] > div, #beranda [role="img"] svg, [data-globe] div[aria-hidden] > span')].map(el => getComputedStyle(el).transform))`;
+  /** Posisi (transform terhitung) semua bagian yang bergerak sendiri di layar pertama: pita, maskot, penanda bola dunia, kartu melayang. */
+  const pose = `JSON.stringify([...document.querySelectorAll('[data-marquee] > div, #beranda [role="img"] svg, [data-globe] div[aria-hidden] > span, [data-float]')].map(el => getComputedStyle(el).transform))`;
+  /** Posisi kartu melayang di samping bola dunia (hanya tampil di layar lebar). */
+  const floatPose = `JSON.stringify([...document.querySelectorAll('[data-float]')].map(el => getComputedStyle(el).transform))`;
 
   // Layar setinggi 1000px: judul hero, bola dunia, DAN pita berjalan sama-sama terlihat (bagian yang keluar layar
   // memang berhenti sendiri — itu diperiksa terpisah di bawah).
@@ -990,6 +811,10 @@ async function motion(t: SuiteContext, k: Kit): Promise<void> {
   const word1 = await word();
   const changed = await k.waitFor(`(__t.all('h1 [data-rotating]')[0]?.innerText.trim() ?? '') !== ${JSON.stringify(word1)}`, 6000);
   const moving = (await t.evaluate<number>(rafDuring(600))) > 10;
+  const float1 = await t.evaluate<string>(floatPose);
+  await t.sleep(700);
+  const float2 = await t.evaluate<string>(floatPose);
+  t.check('awal: dua kartu samping bola dunia melayang naik-turun', float1.split('matrix').length === 3 && float1 !== float2, `${float1} → ${float2}`);
   t.check('awal: pita berjalan, kata hero berganti, halaman meminta frame', running.marquee === 'running,running' && running.rotating === 'running' && running.pressed === 'false' && changed && moving, `${JSON.stringify(running)} kata berganti=${changed}`);
 
   // ---- Tombol "Jeda animasi" (WCAG 2.2.2): semua gerak yang berjalan sendiri berhenti, tanpa bergantung pada sistem ----

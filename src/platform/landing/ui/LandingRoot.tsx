@@ -12,6 +12,10 @@ export interface LandingRootProps {
   /** Untuk uji E2E. */
   'data-testid'?: string;
   'data-ready'?: 'true' | 'false';
+  /** Halaman landing: 'catalog' | 'course' | 'not-found' (layout/PageLayout.tsx). */
+  'data-page'?: string;
+  /** Halaman landing jalur: id jalurnya. */
+  'data-course'?: string;
 }
 
 /**

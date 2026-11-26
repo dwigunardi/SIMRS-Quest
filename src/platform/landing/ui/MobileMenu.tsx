@@ -103,12 +103,14 @@ export interface MobileMenuLinkProps {
   icon?: ReactNode;
   badge?: ReactNode;
   external?: boolean;
+  /** Tautan ke halaman yang sedang dibuka: aria-current="page" + latar mint. */
+  current?: boolean;
 }
 
 const ROW = 'flex min-h-11 items-center gap-3 rounded-q px-2 py-2 text-[15px]';
 
 /** Satu baris tautan; memilihnya menutup panel. */
-export function MobileMenuLink({ href, children, icon, badge, external }: MobileMenuLinkProps): JSX.Element {
+export function MobileMenuLink({ href, children, icon, badge, external, current = false }: MobileMenuLinkProps): JSX.Element {
   const body = (
     <>
       {icon !== undefined ? (
@@ -142,7 +144,8 @@ export function MobileMenuLink({ href, children, icon, badge, external }: Mobile
           href={href}
           target={external === true ? '_blank' : undefined}
           rel={external === true ? 'noreferrer noopener' : undefined}
-          className={cn(ROW, 'font-bold text-q-ink no-underline transition-colors duration-150 hover:bg-q-muted')}
+          aria-current={current ? 'page' : undefined}
+          className={cn(ROW, 'font-bold text-q-ink no-underline transition-colors duration-150', current ? 'bg-q-tint' : 'hover:bg-q-muted')}
         >
           {body}
         </a>

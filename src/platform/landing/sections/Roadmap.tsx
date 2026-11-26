@@ -82,10 +82,17 @@ function SoonPanel({ track }: { track: LandingTrack }): JSX.Element {
         <h3 className="text-balance text-q-h3 font-bold text-q-ink">{PATHS.soon.title(track.title)}</h3>
         <p className="text-pretty leading-relaxed text-q-ink">{track.summary}</p>
         <p className="text-pretty text-sm leading-relaxed text-q-ink-soft">{PATHS.soon.body}</p>
-        <div className="pb-1 pt-1">
+        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-3 pb-1 pt-1 sm:justify-start">
           <Button3D href={PATHS.soon.href} variant="outline" iconLeft={<Icon name="database" className="h-4 w-4" />}>
             {PATHS.soon.cta}
           </Button3D>
+          <a
+            href={track.landingHref}
+            className="rounded font-bold text-q-primary-ink underline decoration-q-primary-ink/40 underline-offset-4 transition-colors duration-150 hover:decoration-q-primary-ink"
+            data-testid="roadmap-soon-plan"
+          >
+            {PATHS.soon.plan}
+          </a>
         </div>
       </div>
     </Card>

@@ -22,14 +22,40 @@ Router-nya berbasis hash dan dibuat sendiri (`src/platform/router.ts`):
 | tanpa hash, `#`, `#/` | Beranda |
 | `#/sql` | Jalur SQL (membuka misi "Lanjutkan") |
 | `#/sql/misi`, `#/sql/materi`, `#/sql/playground`, `#/sql/progres`, `#/sql/ujian` | Tautan masuk ke sebuah mode jalur SQL; setelah modenya terbuka, URL dirapikan kembali ke `#/sql` |
-| `#/js`, `#/rest`, `#/react`, `#/framework`, alamat lain | Dialihkan ke Beranda dengan pemberitahuan satu baris (jalur belum tersedia / halaman tidak ditemukan) |
+| `#/landing` | Katalog semua jalur (dimuat malas) |
+| `#/landing/sql`, `#/landing/js`, … | Halaman landing satu jalur — satu template berbasis data (`src/platform/landing/courses/`), dimuat malas |
+| `#/landing/<tidak dikenal>` | Halaman 404 ramah (navbar & footer, tautan ke katalog, Beranda, dan jalur SQL; `noindex`) — termasuk alamat yang `%`-nya rusak, mis. `#/landing/100%` |
+| `#/js`, `#/rest`, `#/react`, `#/framework` | Jalur yang belum tersedia: dialihkan (*replace*) ke landing-nya, mis. `#/landing/js` |
+| alamat lain | Dialihkan ke Beranda dengan pemberitahuan satu baris (halaman tidak ditemukan) |
 
 Beranda → jalur dan jalur → Beranda adalah entri riwayat baru, jadi tombol Kembali/Maju browser bekerja dua arah;
 pengalihan dan perapian URL memakai *replace* sehingga tidak menjebak tombol Kembali. Beranda mengingat posisi gulirnya
 per entri riwayat: kembali lewat tombol Kembali memulihkan posisi terakhir, sedangkan navigasi biasa mulai dari atas.
 
+Halaman katalog & landing jalur memakai Navbar, Footer, dan tema terang/gelap yang sama dengan Beranda, dan menulis judul
+tab, meta description/og, dan JSON-LD-nya sendiri (`landing/hooks/usePageMeta.ts`; node `Course` hanya untuk jalur yang
+sudah tersedia). Tuan rumahnya (`landing/pages/LandingPages.tsx`) dimuat malas, begitu pula katalog, landing jalur, dan
+404 — masing-masing chunk sendiri; Beranda tidak mengimpor halaman maupun data jalur itu (`npm run verify` memeriksanya).
+Seperti Beranda, posisi gulir diingat **per entri riwayat**: tautan/menu membuka halaman dari atas, tombol Kembali/Maju
+memulihkan posisi terakhir — di katalog sekaligus kata pencarian dan chip saringannya (`landing/layout/historyMemory.ts`).
+Setelah pindah halaman di dalam aplikasi fokus pindah ke judul halaman baru (pembaca layar mengumumkannya), dan tombol
+**Lewati ke isi utama** muncul pada Tab pertama. Chunk halaman yang gagal diunduh menampilkan layar gagal; halaman
+berikutnya mencoba mengunduh ulang.
+
+**Landing per jalur** dirakit dari SATU template (`landing/pages/CoursePage.tsx` = `course/CourseTop.tsx` +
+`pages/course/CourseBottom.tsx`) dan data satu jalur (`landing/courses/sql.ts`, `soon.ts`) — template tidak berisi teks
+jalur. Jalur SQL dibangun saat runtime dari kurikulum asli (tier, misi, Boss, jenis misi, materi), jadi silabus dan
+angkanya tidak bisa basi; progres di browser hanya **dibaca** (centang misi selesai, status Boss, streak, tombol
+"Lanjutkan" di tier tempat misi berikutnya). Panggung hero jalur SQL mengetik query misi Tier 1 yang sungguhan lalu
+menampilkan penilaian aplikasinya; peragaan "Jalankan query" memakai misi sungguhan dan menilai setiap jenis latihan
+seperti aplikasinya (Tebak Hasil tidak menjalankan query; di Lab Injection kebocoran di mode rentan justru tujuan
+misinya). Empat jalur "Segera" memakai template yang sama dalam varian jujur: rencana materi bertanda "bisa berubah",
+cara mengerjakannya (semuanya ditandai rencana), dan ajakan mulai dari SQL — tanpa silabus, tanggal, atau jumlah
+pelajaran karangan. Katalog ada di `landing/pages/CatalogPage.tsx` + `landing/catalog/`. Cara menambah atau membuka
+jalur: lihat [Cara menambah atau membuka jalur](#cara-menambah-atau-membuka-jalur).
+
 **Satu jalur hangat** (`src/platform/PlatformShell.tsx`): jalur yang pernah dibuka tetap ter-mount saat pengguna pulang
-ke Beranda — hanya disembunyikan. Draf editor, sesi Playground, dan timer ujian tetap hidup; ujian yang waktunya habis
+ke Beranda atau membuka halaman katalog/landing jalur — hanya disembunyikan. Draf editor, sesi Playground, dan timer ujian tetap hidup; ujian yang waktunya habis
 terkumpul sendiri walau pengguna sedang di Beranda, dan mesin SQL tidak dimuat ulang saat "Lanjutkan" ditekan.
 
 ### Beranda (landing)
@@ -64,7 +90,7 @@ database latihan, contoh misi di peragaan (query, hasil, hint, perbedaan), label
 daftar kata yang tidak boleh muncul karena fiturnya tidak ada. Peragaan yang bukan tiruan layar diberi keterangan —
 mis. kalender di panel Streak hanya ilustrasi (aplikasi menyimpan angka streak, bukan riwayat per hari).
 
-**Tema terang/gelap** hanya milik Beranda: atribut `data-theme` pada `<html>` menukar variabel CSS
+**Tema terang/gelap** hanya milik Beranda (dan halaman katalog/landing jalur): atribut `data-theme` pada `<html>` menukar variabel CSS
 (`src/platform/landing/styles/tokens.css`, kelas Tailwind berawalan `q-`). Pilihan disimpan di `localStorage`
 (`simrs-quest:theme:v1`); sebelum pernah memilih, tema mengikuti `prefers-color-scheme`. Layar jalur selalu gelap, dan
 atribut tema dilepas begitu Beranda ditinggalkan. Kontras tiap pasangan warna dihitung (WCAG AA) di `npm run verify`.
@@ -572,6 +598,16 @@ punya hint; Show Solution baru aktif setelah 3 percobaan.
   landing (hal yang tidak ada di aplikasi: akun, toko aplikasi, papan peringkat, asisten AI, testimoni, dan sejenisnya);
   **kontras** tiap pasangan token warna lolos WCAG AA di tema terang dan gelap; dan berkas landing tidak memakai varian
   `dark:` Tailwind.
+- **Halaman jalur** (`courses.ts`): data tiap jalur cocok dengan registri; silabus SQL sama dengan kurikulum (jumlah,
+  judul, urutan, jenis misi, materi per tier); query di panggung hero = query misinya (hanya beda baris/spasi);
+  potongan antarmuka di grid fitur benar-benar ada di layar aplikasi (tab Perbedaan, kotak Beda dialek, penalti hint,
+  jadwal latihan ulang); peragaan Tebak Hasil & Lab Injection memakai judul sukses dari layar misinya, bukan
+  "Belum tepat"/"cocok dengan Expected Output"; jalur "Segera" tidak punya silabus, tanggal, jumlah pelajaran (di
+  teks mana pun selain kalimat tentang SQL), "di halaman ini", atau node JSON-LD `Course`/harga, dan setiap langkah
+  "Cara mengerjakannya" ditandai rencana; teks katalog yang bergantung pada status registri (jumlah jalur, og:description,
+  FAQ "gratis") ikut registri; **kata terlarang** juga dicari di teks yang dirender dari kurikulum (judul misi, konsep,
+  deskripsi tier); semua tautan menuju rute yang dikenal router; meta & JSON-LD; pembaca progres hanya membaca; dan
+  halaman/data jalur tidak terjangkau statis dari Beranda serta tidak menjangkau mesin SQL.
 
 ### Uji E2E di browser
 
@@ -583,6 +619,7 @@ terpasang (lokasi lain: set `CHROME_PATH`). Server, browser, dan folder sementar
 | Suite | Yang diuji |
 |---|---|
 | `home` | Beranda & shell platform: Beranda bersih (satu h1, tanpa `.wasm`, tanpa gulir horizontal di 1400/390/320 px, tombol utama tidak mencuri fokus pengunjung baru sehingga Spasi tetap menggulir), masuk jalur lalu pulang dengan jalur tetap hangat (draf editor, Back/Forward), ringkasan pengguna lama (kartu "Hari ini" di lipatan pertama dengan pangkat, XP, dan bilah kemajuan; Enter melanjutkan) & catatan sekali tampil, peta jalur yang garis hijaunya berhenti di tier saat ini, latihan ulang jatuh tempo dan tautan masuk `#/sql/…`, ujian berjalan (jam mundur, kumpul otomatis di balik Beranda, "Waktu habis"), pengalihan rute tak dikenal (pemberitahuan terlihat walau halaman sedang digulir), karantina progres rusak sejak Beranda dibuka, pulihkan cadangan lewat pemilih file asli, tema terang/gelap (layar jalur tetap gelap), interaksi landing (tab, FAQ dengan keyboard, Hint & Run & Check pada peragaan, korsel, menu navbar, menu layar sempit), gerak (tombol jeda, gerak dikurangi saat halaman terbuka maupun sejak muat awal, halaman tidak meminta frame saat diam), posisi gulir yang pulih lewat tombol Kembali, keadaan semua misi tuntas, serta dua kegagalan unduhan (ringkasan progres, bagian bawah halaman + coba lagi) |
+| `courses` | Katalog & landing jalur: katalog (satu h1, kartu sesuai registri, chip "Segera" dengan mouse & keyboard, pencarian + jumlah hasil aria-live, keadaan kosong & pemulihannya, kartu → landing yang mulai dari atas dengan fokus di judulnya, Kembali memulihkan pencarian/hasil/posisi gulir, katalog lewat tautan baru mulai bersih), landing SQL (judul tab, meta & og, JSON-LD Course/BreadcrumbList/FAQPage yang valid, breadcrumb, angka 72/10/39/14.800 dari kurikulum, panggung hero yang mengetik misi lalu menampilkan "Jawaban benar!", "Lewati ke isi utama", satu tombol "Mulai" di tier 1, "Lihat silabus", tier 1 berisi misi & materi kurikulum dengan wilayah bernama judul tier, "Buka semua"/"Tutup semua", semua tautan dikenal router, CTA → `#/sql` dan baru di situ `.wasm` dimuat), peragaan "Jalankan query" (Lab Injection = "Serangan berhasil!" dengan kolom mode rentan/aman, Tebak Hasil = "Tebakanmu tepat!" tanpa menjalankan query), pengguna lama (centang "Selesai", pill kemajuan, status Boss, satu tombol "Lanjutkan" di tier misi berikutnya, tombol & kalimat CTA untuk yang sudah mulai, streak yang putus tanpa "0 hari", localStorage tidak berubah), varian "Segera" untuk keempat jalur (JSON-LD tanpa Course, langkah bertanda rencana, panggung kartu rencana), `#/js` → `#/landing/js` dengan Back/Forward yang tidak terjebak, 404 ramah (juga untuk alamat `%`-rusak), tautan Beranda (menu Jalur, pita berjalan — termasuk fokus keyboard yang tidak menggeser pita —, strip Jelajahi, peta jalur, footer, posisi gulir pulih), tema yang sama dengan Beranda (layar jalur tetap gelap), jalur hangat di balik landing (draf editor utuh, Tab tidak pernah masuk ke jalur tersembunyi, judul tab pulih), tanpa `.wasm` di halaman landing, tanpa gulir horizontal di 1440/375 px, kartu "Tanpa instalasi" tidak menutupi isi ponsel |
 | `worker` | Penilaian lewat Web Worker, batas 100.000 baris, halaman tetap responsif saat query macet, batas waktu 8 detik, tombol Hentikan, worker dibuat ulang, Playground (salinan DB sesi, INSERT sungguhan, transaksi terbuka), Urutan Eksekusi pada query macet |
 | `boss` | Boss terkunci sampai semua misi tier selesai, tanpa hint, Show Solution terkunci 3 percobaan, tier berikutnya tetap terbuka, pesan di tab Materi, perayaan "Boss dikalahkan" dengan XP penuh |
 | `backup` | Ekspor mengunduh file berisi progres/kesalahan/materi, impor di browser kosong memulihkan semuanya, file yang salah ditolak tanpa mengubah progres |
@@ -603,10 +640,10 @@ Setiap suite juga gagal bila ada error JavaScript atau `console.error`/`warn` di
 │   ├── verify-missions.ts        # npm run verify (entry point)
 │   ├── verify/                   # report, curriculum, sqlMissions, labMissions, predictMissions, testCases,
 │   │                             # planTree, resultDiff, execSteps, sqlComplete, materi, weakness, worker, backup, exam,
-│   │                             # review, achievements, perfLab, fixtures, platform, landing, memoryStorage
+│   │                             # review, achievements, perfLab, fixtures, platform, landing, courses, memoryStorage
 │   ├── fixtures/                 # fixture emas: storage-v1.json, backup-format1.json (JANGAN disunting)
 │   ├── test-cases/               # kasus uji per tier: tier1-3.ts, tier4.ts … tier10.ts, bosses.ts, index.ts, types.ts
-│   └── e2e/                      # npm run e2e: run (entry), server (Vite), browser (CDP), context (helper), suites/
+│   └── e2e/                      # npm run e2e: run (entry), server (Vite), browser (CDP), context & kit (helper), suites/
 └── src/
     ├── main.tsx                  # entry React → platform/PlatformShell
     ├── fonts.css / index.css     # font lokal (@fontsource) & gaya dasar layar jalur
@@ -619,14 +656,26 @@ Setiap suite juga gagal bila ada error JavaScript atau `console.error`/`warn` di
     │   ├── brand.ts / BrandMark.tsx / screens.tsx   # nama produk, logo, layar pemuatan & galat platform
     │   └── landing/
     │       ├── LandingBelow.tsx  # bagian 4–13 (satu chunk malas)
-    │       ├── lib/              # content.ts (SEMUA teks & angka), motion.ts, scroll.ts, cn.ts
+    │       ├── lib/              # content.ts (SEMUA teks & angka Beranda), pagesContent.ts (teks katalog/template),
+    │       │                     # motion.ts, scroll.ts, cn.ts
     │       ├── sections/         # Navbar, Hero, TodayStrip, CategoryMarquee, Roadmap, CatalogStrip, PracticeSection,
     │       │                     # ShowcaseSection, Ranks, Gamification, MascotHint, Devices, FAQ, FinalCTA, Footer,
     │       │                     # Notices, RestorePanel
     │       ├── ui/               # LandingRoot, Section, Button3D, Pill, Card, Tabs, Accordion, NavDropdown, MobileMenu,
-    │       │                     # CodeWindow, Mockups, Reveal, CountUp, ThemeToggle, Icon
+    │       │                     # CodeWindow, Mockups, Reveal, CountUp, ThemeToggle, Icon, Breadcrumb, Chip, StatRow,
+    │       │                     # Eyebrow, LogoCard, CourseCard
+    │       ├── pages/            # LandingPages (tuan rumah malas: gulir per entri riwayat, chunk per halaman), CatalogPage,
+    │       │                     # CoursePage, NotFoundPage, course/ (bagian bawah landing jalur: baris fitur rows/,
+    │       │                     # alasan, FAQ, terkait, CTA, "Sambil menunggu")
+    │       ├── course/           # bagian atas landing jalur: CourseTop, CourseHero + HeroStage (panggung kanan), fitur,
+    │       │                     # silabus, isi jalur, rencana materi, cara mengerjakannya
+    │       ├── catalog/          # bagian-bagian katalog '#/landing'
+    │       ├── courses/          # data jalur (sql.ts dari kurikulum, soon.ts), types.ts, catalog.ts (ringan), progress.ts
+    │       │                     # (hanya baca), seo.ts (JSON-LD), index.ts (COURSES/getCourse)
+    │       ├── layout/           # PageLayout (Navbar + main + Footer, fokus judul, "Lewati ke isi utama"), status
+    │       │                     # pengguna, layar sementara/galat, historyMemory (ingatan per entri riwayat)
     │       ├── illustrations/    # Mascot (Kapi), Globe, FloatingBits, Wave, confetti
-    │       ├── hooks/            # useTheme, usePrefersReducedMotion (+ jeda animasi), useCountUp, useTypewriter
+    │       ├── hooks/            # useTheme, usePrefersReducedMotion (+ jeda animasi), useCountUp, useTypewriter, usePageMeta
     │       └── styles/           # tokens.css (variabel warna terang/gelap), landing.css, fonts.css
     ├── tracks/sql/               # SqlTrack.tsx (pembungkus jalur SQL), glance.ts (ringkasan & penjaga data untuk Beranda)
     ├── App.tsx                   # layar jalur SQL (mode, misi aktif, wiring)
@@ -767,3 +816,30 @@ Aturan umum untuk semua jenis (lihat `MissionBase` di `src/types.ts`):
 - `pitfalls`: jebakan umum; `dialects`: `{ label, syntax: { sqlite, sqlServer, mysql, postgresql, oracle }, note? }`.
 
 Jika butuh data baru, ubah `src/db/seed.ts`, lalu jalankan ulang `npm run verify`, karena expected output semua misi ikut berubah.
+
+## Cara menambah atau membuka jalur
+
+Setiap jalur punya satu halaman landing (`#/landing/<id>`) yang dirender template yang sama dari data. Template tidak
+berisi teks jalur; semua teks jalur ada di `src/platform/landing/courses/`, teks bersama di `landing/lib/pagesContent.ts`.
+
+**Menambah jalur baru (status "Segera")**
+
+1. Registri: tambahkan jalur di `src/platform/tracks.ts` (id huruf kecil, bukan `landing` atau segmen cadangan lain),
+   menu & ikon navbar di `TRACKS` (`landing/lib/content.ts`), dan ringkasan kartu katalog di `EXTRA` +
+   `SUGGESTED_ORDER` (`landing/courses/catalog.ts`).
+2. Data landing: satu objek `SoonCourse` di `landing/courses/soon.ts` (tipe di `types.ts`) — `hero`, `plan` (4–6 topik
+   bertanda "Rencana" + catatan bisa berubah, diturunkan dari deskripsi registri), `how` (setiap langkah menyebut
+   "rencana"/"direncanakan"), `waiting`, `faq` (6 pertanyaan, termasuk kapan/sudah bisa dicoba/perlu instal apa/progres
+   SQL), `related`, `cta`, `meta`. Tanpa tanggal, tanpa jumlah pelajaran, tanpa "di halaman ini".
+3. Kartu logo katalog (`CATALOG_LOGOS` di `pagesContent.ts`) dan, bila perlu, pill pita berjalan di Beranda.
+4. `npm run verify` menolak data yang tidak cocok dengan registri, angka/tanggal karangan, tautan yang tidak dikenal
+   router, dan kata terlarang; `npm run e2e -- --only=courses` memeriksa halamannya di browser.
+
+**Membuka jalur (Segera → Tersedia)**
+
+1. Registri: status `'tersedia'` beserta `load` dan `glance` (`tracks.ts`, lihat `src/tracks/sql/`).
+2. Pindahkan datanya menjadi `AvailableCourse` (seperti `sql.ts`): statistik, 6 fitur dengan potongan antarmuka,
+   silabus, isi jalur, baris fitur, dan 4 alasan — dibangun dari data kurikulum jalur itu saat runtime, jangan disalin
+   tangan. Pembaca progres (`courses/progress.ts`) perlu tahu cara membaca progres jalur itu.
+3. `npm run verify` akan menandai teks yang ikut status registri (jumlah jalur di katalog, og:description, FAQ "gratis",
+   JSON-LD) sampai semuanya cocok lagi.

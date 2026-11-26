@@ -3,13 +3,20 @@
  *
  *   Beranda ('' | '#/')   → <Home />
  *   '#/<jalur>[/…]'       → komponen jalur, dimuat malas dari manifest.load
+ *   '#/landing'           → katalog semua jalur (landing/pages/CatalogPage, dimuat malas)
+ *   '#/landing/<id>'      → landing jalur (landing/pages/CoursePage, dimuat malas); id tak dikenal → NotFoundPage
+ *   '#/<jalur segera>'    → dialihkan (replace) ke '#/landing/<id>'
+ *   '#/<tak dikenal>'     → dialihkan ke Beranda dengan pemberitahuan satu baris
  *
- * "Satu jalur hangat": jalur yang pernah dibuka TETAP ter-mount saat pengguna kembali ke Beranda, hanya disembunyikan
- * (atribut hidden). Dengan begitu draf editor, sesi Playground, dan timer ujian (kumpul otomatis) tetap hidup. Beranda
- * sebaliknya di-unmount saat tidak tampil, sehingga ringkasannya selalu dihitung ulang ketika dibuka lagi.
+ * "Satu jalur hangat": jalur yang pernah dibuka TETAP ter-mount saat pengguna kembali ke Beranda atau membuka halaman
+ * katalog/landing, hanya disembunyikan (atribut hidden). Dengan begitu draf editor, sesi Playground, dan timer ujian
+ * (kumpul otomatis) tetap hidup. Beranda dan halaman landing sebaliknya di-unmount saat tidak tampil.
  *
  * Riwayat browser: Beranda → jalur dan jalur → Beranda adalah entri baru (tombol Kembali bekerja dua arah);
  * pengalihan (jalur tak dikenal / belum tersedia) dan perapian URL adalah replace.
+ *
+ * Judul tab: shell hanya menulis document.title untuk Beranda dan layar jalur. Halaman katalog/landing menulis
+ * judulnya sendiri (usePageMeta) — efek anak berjalan sebelum efek induk, jadi shell tidak boleh menimpanya.
  */
 import {
   Component,
@@ -27,7 +34,8 @@ import {
 } from 'react';
 import { PRODUCT_NAME } from './brand';
 import { Home } from './Home';
-import { HOME_ROUTE, RESERVED_SEGMENTS, navigate, useRoute, type Route } from './router';
+import { PageErrorBoundary, PageLoading } from './landing/layout/PageFallback';
+import { HOME_ROUTE, RESERVED_SEGMENTS, formatRoute, isLandingRoute, navigate, useRoute, type CourseRoute, type LandingRoute, type Route } from './router';
 import { PlatformError, PlatformLoading } from './screens';
 import { getTrack, type TrackManifest, type TrackProps } from './tracks';
 
@@ -59,6 +67,35 @@ function echo(text: string): string {
   return text.length > MAX_ECHO ? `${text.slice(0, MAX_ECHO)}…` : text;
 }
 
+/**
+ * Halaman katalog/landing jalur: tuan rumahnya (landing/pages/LandingPages — status pengguna, gulir ke atas, ketiga
+ * halaman yang masing-masing chunk sendiri) dimuat malas, jadi Beranda tidak membesar. Selama chunk diunduh tampil
+ * layar sementara bertema (tema tidak berkedip ke latar gelap); bila gagal, layar gagal dengan "Muat ulang".
+ *
+ * React.lazy menyimpan kegagalan selamanya, jadi setelah gagal dibuat komponen lazy BARU: rute landing berikutnya
+ * (batas galat dipulihkan lewat resetKey) benar-benar mengunduh ulang chunk-nya.
+ */
+function createLandingPages(): LazyExoticComponent<ComponentType<{ route: LandingRoute }>> {
+  return lazy(() =>
+    import('./landing/pages/LandingPages').catch((error: unknown) => {
+      landingPages = createLandingPages();
+      throw error;
+    }),
+  );
+}
+let landingPages = createLandingPages();
+
+function LandingHost({ route }: { route: LandingRoute }): JSX.Element {
+  const LandingPages = landingPages;
+  return (
+    <PageErrorBoundary resetKey={formatRoute(route)}>
+      <Suspense fallback={<PageLoading />}>
+        <LandingPages route={route} />
+      </Suspense>
+    </PageErrorBoundary>
+  );
+}
+
 /** Segmen pertama hash apa adanya (huruf kecil), untuk menjelaskan kenapa sebuah tautan berakhir di Beranda. */
 function firstSegment(hash: string): string | null {
   if (!hash.startsWith('#/')) return null;
@@ -85,15 +122,33 @@ export function PlatformShell(): JSX.Element {
   return <ShellScreens route={useRoute()} />;
 }
 
+/** Jalur di registri yang belum tersedia → rute landing-nya (pengalihan); selain itu null. */
+function soonRedirectOf(route: Route): CourseRoute | null {
+  if (route.kind !== 'track') return null;
+  const known = getTrack(route.trackId);
+  return known !== undefined && known.status === 'segera' ? { kind: 'course', slug: known.id } : null;
+}
+
 function ShellScreens({ route }: { route: Route }): JSX.Element {
   const track = route.kind === 'track' ? openableTrack(route.trackId) : undefined;
+  /**
+   * Halaman landing yang tampil: rute katalog/landing, atau landing jalur 'segera' yang sedang dialihkan (dirender
+   * langsung supaya Beranda tidak sempat ter-mount sebentar sebelum URL-nya diganti).
+   */
+  const landing: LandingRoute | null = isLandingRoute(route) ? route : soonRedirectOf(route);
   /** Jalur yang sedang "hangat" (ter-mount). Hanya satu: membuka jalur lain melepas yang lama. */
   const [warm, setWarm] = useState<LoadableTrack | null>(track ?? null);
   if (track && warm !== track) setWarm(track);
-  /** Pemberitahuan satu baris di Beranda setelah pengalihan; hilang saat ditutup atau saat masuk ke sebuah jalur. */
+  /** Pemberitahuan satu baris di Beranda setelah pengalihan; hilang saat ditutup atau saat membuka jalur/halaman lain. */
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
+    if (isLandingRoute(route)) {
+      setNotice(null);
+      // Rapikan variasi penulisan ('#/LANDING/SQL', '#/landing/', '#/landing/sql/x') ke bentuk kanonik.
+      if (window.location.hash !== formatRoute(route)) navigate(route, { replace: true });
+      return;
+    }
     if (route.kind === 'track') {
       if (track) {
         setNotice(null);
@@ -102,8 +157,14 @@ function ShellScreens({ route }: { route: Route }): JSX.Element {
         if (route.rest.length === 0) navigate(route, { replace: true });
         return;
       }
-      const known = getTrack(route.trackId);
-      setNotice(known ? `Jalur "${known.id}" belum tersedia.` : `Jalur "${echo(route.trackId)}" tidak ditemukan.`);
+      const redirect = soonRedirectOf(route);
+      if (redirect) {
+        // Jalur 'segera': halaman landing-nya menjelaskan rencananya — tanpa pemberitahuan, URL diganti (replace).
+        setNotice(null);
+        navigate(redirect, { replace: true });
+        return;
+      }
+      setNotice(`Jalur "${echo(route.trackId)}" tidak ditemukan.`);
       navigate(HOME_ROUTE, { replace: true });
       return;
     }
@@ -115,15 +176,21 @@ function ShellScreens({ route }: { route: Route }): JSX.Element {
     navigate(HOME_ROUTE, { replace: true });
   }, [route, track]);
 
+  // Judul tab hanya untuk Beranda dan layar jalur; halaman landing memasang judulnya sendiri (usePageMeta) dan
+  // efeknya berjalan lebih dulu — shell tidak boleh menimpanya. null = bukan urusan shell.
+  let shellTitle: string | null = null;
+  if (track) shellTitle = `${track.title} · ${PRODUCT_NAME}`;
+  else if (route.kind === 'home') shellTitle = PRODUCT_NAME;
   useEffect(() => {
-    document.title = track ? `${track.title} · ${PRODUCT_NAME}` : PRODUCT_NAME;
-  }, [track]);
+    if (shellTitle !== null) document.title = shellTitle;
+  }, [shellTitle]);
 
   const dismissNotice = useCallback(() => setNotice(null), []);
 
   return (
     <>
-      {track ? null : <Home notice={notice} onDismissNotice={dismissNotice} />}
+      {track || landing ? null : <Home notice={notice} onDismissNotice={dismissNotice} />}
+      {landing ? <LandingHost route={landing} /> : null}
       {warm ? <TrackHost key={warm.id} track={warm} active={warm === track} route={route} /> : null}
     </>
   );

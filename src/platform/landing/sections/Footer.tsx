@@ -1,21 +1,36 @@
 /**
- * Bagian 14 — Footer: logo kecil + tautan GitHub, kolom "Jalur" (jalur yang belum tersedia tampil tanpa tautan dengan
- * chip "Segera"), dan kolom "Bantuan" (Cadangkan progres → layar Progres jalur; Pertanyaan umum → gulir ke FAQ).
+ * Bagian 14 — Footer: logo kecil + tautan GitHub, kolom "Jalur" (landing tiap jalur — yang belum tersedia diberi chip
+ * "Segera" — lalu "Semua jalur" ke katalog), dan kolom "Bantuan" (Cadangkan progres → layar Progres jalur; Pertanyaan
+ * umum → gulir ke section FAQ halaman ini, id SECTION_IDS.faq).
+ *
+ * Dipakai Beranda dan halaman katalog/landing jalur. `current` menandai tautan halaman yang sedang dibuka
+ * (aria-current="page"); `faqLink={false}` untuk halaman tanpa section FAQ (mis. 404).
  */
 import { useId } from 'react';
 import { ExternalLink } from 'lucide-react';
+import { cn } from '../lib/cn';
 import { FOOTER, NAV, SOON_LABEL, TRACKS } from '../lib/content';
 import { scrollToSection } from '../lib/scroll';
 import { Icon } from '../ui/Icon';
 import { Pill } from '../ui/Pill';
 import { Container } from '../ui/Section';
+import { HOME_CURRENT, type NavCurrent } from './Navbar';
 import { Wordmark } from './navbar/Wordmark';
 
 const LINK =
   'inline-flex min-h-9 items-center gap-2 rounded text-[15px] text-q-ink underline decoration-transparent underline-offset-4 transition-colors duration-150 hover:text-q-primary-ink hover:decoration-q-primary-ink/50';
+/** Tautan halaman yang sedang dibuka. */
+const LINK_CURRENT = 'font-bold text-q-primary-ink decoration-q-primary-ink/50';
 const COLUMN_TITLE = 'm-0 text-sm font-bold text-q-ink-soft';
 
-export function Footer(): JSX.Element {
+export interface FooterProps {
+  /** Halaman yang sedang dibuka (bawaan: Beranda). */
+  current?: NavCurrent;
+  /** Tampilkan tautan "Pertanyaan yang sering muncul" (gulir ke section FAQ halaman ini). Bawaan true. */
+  faqLink?: boolean;
+}
+
+export function Footer({ current = HOME_CURRENT, faqLink = true }: FooterProps = {}): JSX.Element {
   const tracksId = useId();
   const helpId = useId();
   return (
@@ -37,22 +52,26 @@ export function Footer(): JSX.Element {
             {FOOTER.tracksTitle}
           </h2>
           <ul className="m-0 flex list-none flex-col p-0">
-            {TRACKS.map((track) => (
-              <li key={track.id}>
-                {track.href !== undefined ? (
-                  <a href={track.href} className={LINK}>
+            {TRACKS.map((track) => {
+              const here = current.page === 'course' && current.id === track.id;
+              return (
+                <li key={track.id} className="flex min-h-9 flex-wrap items-center gap-x-2.5 gap-y-1">
+                  <a href={track.landingHref} className={cn(LINK, here ? LINK_CURRENT : '')} aria-current={here ? 'page' : undefined}>
                     {track.title}
                   </a>
-                ) : (
-                  <span className="inline-flex min-h-9 flex-wrap items-center gap-x-2.5 gap-y-1 text-[15px] text-q-ink-soft">
-                    {track.title}
+                  {track.status === 'segera' ? (
                     <Pill size="sm" tone="soon">
                       {SOON_LABEL}
                     </Pill>
-                  </span>
-                )}
-              </li>
-            ))}
+                  ) : null}
+                </li>
+              );
+            })}
+            <li>
+              <a href={FOOTER.allTracks.href} className={cn(LINK, current.page === 'catalog' ? LINK_CURRENT : '')} aria-current={current.page === 'catalog' ? 'page' : undefined} data-testid="footer-all-tracks">
+                {FOOTER.allTracks.label}
+              </a>
+            </li>
           </ul>
         </nav>
 
@@ -66,11 +85,13 @@ export function Footer(): JSX.Element {
                 {FOOTER.help.backup.label}
               </a>
             </li>
-            <li>
-              <button type="button" onClick={() => scrollToSection(FOOTER.help.faq.sectionId)} className={LINK} data-testid="footer-faq">
-                {FOOTER.help.faq.label}
-              </button>
-            </li>
+            {faqLink ? (
+              <li>
+                <button type="button" onClick={() => scrollToSection(FOOTER.help.faq.sectionId)} className={LINK} data-testid="footer-faq">
+                  {FOOTER.help.faq.label}
+                </button>
+              </li>
+            ) : null}
           </ul>
         </nav>
       </Container>

@@ -37,7 +37,19 @@ import {
   SQL_TRACK_KEYS,
 } from '../../src/lib/storageKeys';
 import { PRODUCT_NAME, PRODUCT_TAGLINE } from '../../src/platform/brand';
-import { HOME_ROUTE, RESERVED_SEGMENTS, createRouteStore, formatRoute, parseRoute, type Route, type RouterEnv } from '../../src/platform/router';
+import {
+  CATALOG_ROUTE,
+  HOME_ROUTE,
+  LANDING_SEGMENT,
+  RESERVED_SEGMENTS,
+  courseHref,
+  createRouteStore,
+  formatRoute,
+  isLandingRoute,
+  parseRoute,
+  type Route,
+  type RouterEnv,
+} from '../../src/platform/router';
 import { TRACKS, getTrack } from '../../src/platform/tracks';
 import { glance, guard } from '../../src/tracks/sql/glance';
 import type { Mission, UserProgress } from '../../src/types';
@@ -47,6 +59,7 @@ import { assert } from './report';
 type Check = (cond: boolean, msg: string) => void;
 
 const track = (trackId: string, ...rest: string[]): Route => ({ kind: 'track', trackId, rest });
+const course = (slug: string): Route => ({ kind: 'course', slug });
 
 /* ------------------------------------------------------------------ */
 /* Router                                                              */
@@ -71,7 +84,7 @@ function verifyRouterPure(ok: Check): void {
     ['#//sql//ujian', track('sql', 'ujian')],
     ['#/sql/ujian///', track('sql', 'ujian')],
     ['#/sql/misi/t1-select', track('sql', 'misi', 't1-select')],
-    // Decode per segmen; gagal decode di mana pun → Beranda.
+    // Decode per segmen; gagal decode di mana pun → Beranda (kecuali slug landing — lihat di bawah).
     ['#/sql/a%20b', track('sql', 'a b')],
     ['#/sql/a%2Fb', track('sql', 'a/b')],
     ['#/%E0%A4%A', HOME_ROUTE],
@@ -80,12 +93,29 @@ function verifyRouterPure(ok: Check): void {
     // Huruf besar: id jalur dinormalkan, sisa segmen dibiarkan.
     ['#/SQL', track('sql')],
     ['#/Sql/Ujian', track('sql', 'Ujian')],
-    // Id yang tidak terdaftar tetap rute jalur (shell yang memutuskan); segmen cadangan → Beranda.
+    // Id yang tidak ada di registri tetap rute jalur (shell yang memutuskan); segmen cadangan yang halamannya belum
+    // ada → Beranda. Jalur 'segera' tetap rute jalur: shell yang mengalihkannya ke landing-nya.
     ['#/tidak-ada', track('tidak-ada')],
     ['#/js', track('js')],
-    ...RESERVED_SEGMENTS.map((segment): [string, Route] => [`#/${segment}`, HOME_ROUTE]),
+    ...RESERVED_SEGMENTS.filter((segment) => segment !== LANDING_SEGMENT).map((segment): [string, Route] => [`#/${segment}`, HOME_ROUTE]),
     ['#/Profil/saya', HOME_ROUTE],
     ['#/RUNNER', HOME_ROUTE],
+    // Katalog & landing jalur: segmen 'landing' dan slug dinormalkan ke huruf kecil; segmen setelah slug diabaikan.
+    ['#/landing', CATALOG_ROUTE],
+    ['#/landing/', CATALOG_ROUTE],
+    ['#//landing//', CATALOG_ROUTE],
+    ['#/LANDING', CATALOG_ROUTE],
+    ['#/landing/sql', course('sql')],
+    ['#/landing/SQL', course('sql')],
+    ['#/Landing/Js/lainnya', course('js')],
+    ['#//landing//react//', course('react')],
+    ['#/landing/tidak-ada', course('tidak-ada')],
+    ['#/landing/a%20b', course('a b')],
+    // Slug landing yang gagal di-decode → halaman 404 jalur (slug apa adanya), bukan Beranda tanpa penjelasan.
+    ['#/landing/%E0%A4%A', course('%e0%a4%a')],
+    ['#/landing/100%', course('100%')],
+    ['#/%E0%A4%A/landing', HOME_ROUTE],
+    ['#/landingx', track('landingx')],
   ];
   for (const [hash, expected] of cases) {
     let actual: Route | null = null;
@@ -103,6 +133,10 @@ function verifyRouterPure(ok: Check): void {
     }
   }
   ok(parseRoute('') === HOME_ROUTE && parseRoute('#/profil') === HOME_ROUTE, 'rute Beranda harus objek HOME_ROUTE yang sama (stabil untuk React)');
+  ok(parseRoute('#/landing') === CATALOG_ROUTE && parseRoute('#/landing/') === CATALOG_ROUTE, 'rute katalog harus objek CATALOG_ROUTE yang sama');
+  ok(RESERVED_SEGMENTS.includes(LANDING_SEGMENT) && LANDING_SEGMENT === 'landing', "'landing' harus segmen yang dicadangkan (tidak boleh menjadi id jalur)");
+  ok(courseHref('sql') === '#/landing/sql' && courseHref('SQL') === '#/landing/sql' && courseHref('') === '#/landing', 'courseHref harus hash kanonik landing jalur');
+  ok(isLandingRoute(CATALOG_ROUTE) && isLandingRoute(course('sql')) && !isLandingRoute(HOME_ROUTE) && !isLandingRoute(track('sql')), 'isLandingRoute hanya untuk katalog & landing jalur');
 
   const formats: Array<[route: Route, expected: string]> = [
     [HOME_ROUTE, '#/'],
@@ -113,9 +147,14 @@ function verifyRouterPure(ok: Check): void {
     [track('sql', '', 'ujian', ''), '#/sql/ujian'],
     [track('SQL'), '#/sql'],
     [track(''), '#/'],
+    [CATALOG_ROUTE, '#/landing'],
+    [course('sql'), '#/landing/sql'],
+    [course('React'), '#/landing/react'],
+    [course(''), '#/landing'],
+    [course('a b'), '#/landing/a%20b'],
   ];
   for (const [route, expected] of formats) ok(formatRoute(route) === expected, `formatRoute(${JSON.stringify(route)}) = ${formatRoute(route)}, seharusnya ${expected}`);
-  for (const route of [HOME_ROUTE, track('sql'), track('sql', 'ujian'), track('sql', 'a b', 'c/d', 'é✓'), track('framework', 'nest', '3')]) {
+  for (const route of [HOME_ROUTE, CATALOG_ROUTE, course('sql'), course('a b'), course('é✓'), track('sql'), track('sql', 'ujian'), track('sql', 'a b', 'c/d', 'é✓'), track('framework', 'nest', '3')]) {
     ok(firstDifference(parseRoute(formatRoute(route)), route) === null, `parseRoute(formatRoute(${JSON.stringify(route)})) harus mengembalikan rute yang sama`);
   }
 }
@@ -196,6 +235,22 @@ function verifyRouteStore(ok: Check): void {
   const afterUnsubscribe = calls;
   store.navigate(track('sql'));
   ok(calls === afterUnsubscribe, 'store: pelanggan yang sudah berhenti tidak dipanggil lagi');
+
+  // Hitungan perpindahan rute (dipakai halaman landing untuk memindahkan fokus ke judulnya setelah navigasi di dalam
+  // aplikasi): pemuatan pertama 0, perapian hash yang setara tidak dihitung, rute lain dihitung.
+  const fresh = createRouteStore(new FakeEnv());
+  fresh.getRoute();
+  ok(fresh.changes() === 0, 'store: rute pertama yang dibaca bukan perpindahan');
+  const counted = new FakeEnv();
+  const countStore = createRouteStore(counted);
+  counted.hash = '#/landing/';
+  countStore.getRoute();
+  countStore.navigate(CATALOG_ROUTE, { replace: true });
+  countStore.getRoute();
+  ok(countStore.changes() === 0, "store: merapikan '#/landing/' → '#/landing' bukan perpindahan");
+  counted.hash = '#/landing/sql';
+  countStore.getRoute();
+  ok(countStore.changes() === 1, 'store: katalog → landing jalur dihitung satu perpindahan');
 }
 
 /* ------------------------------------------------------------------ */
@@ -207,7 +262,7 @@ function sourceOf(relative: string): string {
 }
 
 /** Sumber impor STATIS sebuah berkas (import … from '…', export … from '…', import '…'). Impor dinamis tidak ikut. */
-function staticImports(source: string): string[] {
+export function staticImports(source: string): string[] {
   const found: string[] = [];
   const patterns = [/^import\s[^;]*?\sfrom\s+['"]([^'"]+)['"]/gm, /^export\s+(?:\*|\{[^}]*\})\s+from\s+['"]([^'"]+)['"]/gm, /^import\s+['"]([^'"]+)['"]/gm];
   for (const pattern of patterns) {
