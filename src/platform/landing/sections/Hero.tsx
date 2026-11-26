@@ -180,14 +180,20 @@ export function Hero({ glance, ready, onStart, onRestore, expectReturning = fals
           style={reduced ? undefined : { y: leftY }}
           className="absolute left-0 top-[34%] z-30 hidden w-[264px] lg:block wide:w-[292px] [@media(min-width:1024px)_and_(max-height:920px)]:top-[22%]"
         >
-          <CityQueryCode onTyped={() => setTyped(true)} />
+          {/* Melayang naik-turun (CSS q-float) di elemen DALAM: transform parallax milik pembungkus tidak tertimpa. */}
+          <div data-float="" className="q-float">
+            <CityQueryCode onTyped={() => setTyped(true)} />
+          </div>
         </motion.div>
         {/* Di layar lebar yang pendek panggungnya lebih rendah: kartu hasil dinaikkan supaya tidak menjorok ke pita marquee. */}
         <motion.div
           style={reduced ? undefined : { y: rightY }}
           className="absolute right-0 top-[24%] z-30 hidden w-[216px] lg:block wide:right-6 [@media(min-width:1024px)_and_(max-height:920px)]:top-[2%]"
         >
-          <CityQueryResult revealed={typed} />
+          {/* Tempo & fase berbeda dari kartu kiri supaya keduanya tidak naik-turun serempak. */}
+          <div data-float="" className="q-float" style={{ animationDuration: '7s', animationDelay: '-2.5s' }}>
+            <CityQueryResult revealed={typed} />
+          </div>
         </motion.div>
 
         {/* Layar lebar yang pendek (laptop 1440×900): bola dunia dikecilkan supaya Indonesia & badge masuk lipatan pertama. */}

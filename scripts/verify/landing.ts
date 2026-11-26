@@ -32,7 +32,7 @@ import { THEME_STORAGE_KEY } from '../../src/platform/landing/hooks/useTheme';
 import { checkMission } from '../../src/lib/validator';
 import { PRODUCT_TAGLINE } from '../../src/platform/brand';
 import * as content from '../../src/platform/landing/lib/content';
-import { formatRoute, parseRoute } from '../../src/platform/router';
+import { CATALOG_ROUTE, courseHref, formatRoute, parseRoute } from '../../src/platform/router';
 import { TRACKS as REGISTRY } from '../../src/platform/tracks';
 import type { Mission } from '../../src/types';
 import { isLightFile, isLightPackage, staticClosure } from './platform';
@@ -147,11 +147,25 @@ function verifyTracksAndRoutes(ok: Check): void {
   }
   ok(!/\b20\d{2}\b|bulan depan|minggu depan|kuartal|tahun ini/i.test(content.PATHS.soon.body), 'PATHS.soon.body tidak boleh menjanjikan tanggal');
 
+  // Landing tiap jalur (navbar, footer, pita berjalan, panel 'segera' di peta) dan katalog.
+  for (const track of content.TRACKS) {
+    ok(track.landingHref === courseHref(track.id), `jalur ${track.id}: landingHref harus '${courseHref(track.id)}'`);
+  }
+  ok(content.ROUTES.catalog === formatRoute(CATALOG_ROUTE), "ROUTES.catalog harus '#/landing'");
+  ok(
+    content.NAV.tracks.all.href === content.ROUTES.catalog && content.FOOTER.allTracks.href === content.ROUTES.catalog && content.EXPLORE.allTracks.href === content.ROUTES.catalog,
+    'tautan "Semua jalur" (navbar, footer, strip Jelajahi) harus ke ROUTES.catalog',
+  );
+  for (const item of content.MARQUEE.items) {
+    const owner = content.TRACKS.find((t) => t.id === item.trackId);
+    ok(owner !== undefined && owner.status === item.status, `MARQUEE "${item.label}": trackId "${item.trackId}" harus jalur yang ada dengan status yang sama`);
+  }
+
   // Tautan ke dalam aplikasi: jalur sql + segmen masuk yang dikenali src/App.tsx (ENTRY_MODES).
   const appSource = readSource('src/App.tsx');
   ok(content.ROUTES.home === formatRoute({ kind: 'home' }), "ROUTES.home harus '#/'");
   for (const [name, hash] of Object.entries(content.ROUTES)) {
-    if (name === 'home') continue;
+    if (name === 'home' || name === 'catalog') continue;
     const route = parseRoute(hash);
     ok(route.kind === 'track' && route.trackId === 'sql' && formatRoute(route) === hash, `ROUTES.${name} "${hash}" harus rute kanonik ke jalur sql`);
     if (route.kind !== 'track') continue;
@@ -449,10 +463,12 @@ function verifyStuck(ok: Check, SQL: SqlJsStatic, db: Database): void {
 
 /**
  * Hal yang TIDAK ada di aplikasi; landing tidak boleh menyebutnya (akun, jumlah pengguna, toko aplikasi, ijazah,
- * papan peringkat, teman, hadiah, asisten AI, testimoni, forum). Diperiksa pada seluruh isi content.ts DAN semua
- * berkas .tsx/.ts landing + Home.tsx, termasuk komentarnya — teks yang ditulis langsung di komponen ikut terjaring.
+ * papan peringkat, teman, hadiah, asisten AI, testimoni, forum, streak freeze, narasi audio, kursus Python, durasi
+ * belajar dalam jam). Diperiksa pada seluruh isi content.ts DAN semua berkas .tsx/.ts di src/platform/landing/**
+ * (termasuk halaman katalog/landing jalur, data courses/, dan lib/pagesContent.ts) + Home.tsx + PlatformShell.tsx,
+ * termasuk komentarnya — teks yang ditulis langsung di komponen ikut terjaring.
  */
-const FORBIDDEN: ReadonlyArray<[label: string, pattern: RegExp]> = [
+export const FORBIDDEN: ReadonlyArray<[label: string, pattern: RegExp]> = [
   ['sertifikat', /sertifikat/i],
   ['App Store', /app\s*store/i],
   ['Google Play', /google\s*play|play\s*store/i],
@@ -472,11 +488,21 @@ const FORBIDDEN: ReadonlyArray<[label: string, pattern: RegExp]> = [
   ['papan peringkat', /papan\s+peringkat|leaderboard/i],
   ['login', /\blogin\b|\bmasuk\s+dengan\b|sudah\s+punya\s+akun|daftar\s+akun|buat\s+akun/i],
   ['unduh aplikasi', /unduh\s+aplikasi|aplikasi\s+(ponsel|android|ios)\b/i],
+  ['terdaftar', /\bterdaftar\b/i],
+  ['streak freeze', /streak\s*freeze|pembeku(an)?\s+streak|bekukan\s+streak/i],
+  ['double or nothing', /double\s+or\s+nothing|taruhan\s+streak/i],
+  ['narasi audio', /narasi\s+audio|audio\s+narasi|\bpodcast\b|dibacakan\s+(narator|pengisi\s+suara)/i],
+  ['Python', /\bpython\b/i],
+  ['chat', /\bchat\b|\bobrolan\b/i],
+  ['asisten', /\basisten\b/i],
+  ['peti', /\bpeti\b/i],
+  ['bintang', /\bbintang\b/i],
+  ['durasi jam', /\b\d+(?:[.,]\d+)?\s*(?:jam|hours?)\b/i],
 ];
 
 function verifyWording(ok: Check): void {
   const source = readSource('src/platform/landing/lib/content.ts');
-  for (const file of ['src/platform/Home.tsx', ...landingFiles()]) {
+  for (const file of ['src/platform/Home.tsx', 'src/platform/PlatformShell.tsx', ...landingFiles()]) {
     const text = readSource(file);
     for (const [label, pattern] of FORBIDDEN) {
       const match = pattern.exec(text);
@@ -547,6 +573,7 @@ export const CONTRAST_PAIRS: ReadonlyArray<readonly [fg: string, bg: string, min
   ['ink-soft', 'footer', 4.5, 'teks sekunder di footer'],
   ['on-primary', 'primary', 4.5, 'teks tombol utama'],
   ['on-primary', 'primary-hover', 4.5, 'teks tombol utama saat disorot'],
+  ['primary', 'on-primary', 4.5, 'angka di chip saringan katalog yang aktif (warna tombol utama dibalik)'],
   ['primary-ink', 'bg', 4.5, 'tautan/teks hijau di latar halaman'],
   ['primary-ink', 'surface', 4.5, 'teks tombol outline'],
   ['primary-ink', 'muted', 4.5, 'teks tombol outline saat disorot'],
@@ -646,7 +673,7 @@ function verifyContrast(ok: Check): void {
 /* Landing tetap ringan                                                */
 /* ------------------------------------------------------------------ */
 
-function landingFiles(dir = 'src/platform/landing'): string[] {
+export function landingFiles(dir = 'src/platform/landing'): string[] {
   const absolute = fileURLToPath(new URL(`../../${dir}`, import.meta.url));
   return readdirSync(absolute, { withFileTypes: true }).flatMap((entry) => {
     const path = `${dir}/${entry.name}`;
@@ -655,12 +682,35 @@ function landingFiles(dir = 'src/platform/landing'): string[] {
   });
 }
 
+/**
+ * Halaman katalog/landing jalur dan data jalurnya (dimuat malas oleh shell): BOLEH mengimpor data misi/materi, tetapi
+ * tetap tidak boleh menjangkau mesin SQL atau layar jalur. Bahwa berkas ini tidak terjangkau statis dari Beranda
+ * diperiksa scripts/verify/courses.ts.
+ */
+export function isLazyPageFile(file: string): boolean {
+  return file.startsWith('src/platform/landing/pages/') || file.startsWith('src/platform/landing/courses/');
+}
+
+/** Yang tidak boleh terjangkau statis dari halaman landing jalur: mesin SQL, WASM, worker, layar jalur, pustaka malas. */
+export function isEngineItem(item: string): boolean {
+  if (item.startsWith('?')) return true; // impor yang tidak bisa ditelusuri dianggap berbahaya
+  if (item === 'sql.js' || item.includes('.wasm') || item === 'cobe' || item === 'canvas-confetti') return true;
+  if (item === 'src/lib/sqlEngine.ts' || item === 'src/lib/sqlLoader.ts' || item === 'src/App.tsx') return true;
+  if (item.startsWith('src/workers/') || item.startsWith('src/tracks/')) return true;
+  return item.startsWith('src/components/') && item !== 'src/components/HighlightedCode.tsx';
+}
+
 function verifyLight(ok: Check): void {
   const files = landingFiles();
   ok(files.length > 0, 'berkas landing tidak ditemukan');
   for (const file of files) {
-    const heavy = staticClosure(file).filter((item) => !isLightFile(item) && !isLightPackage(item));
-    ok(heavy.length === 0, `${file} harus tetap ringan — impor statis tak diizinkan: ${heavy.join(', ')} (muat malas dengan import())`);
+    if (isLazyPageFile(file)) {
+      const engine = staticClosure(file).filter(isEngineItem);
+      ok(engine.length === 0, `${file} (halaman malas) tidak boleh menjangkau mesin SQL/layar jalur — impor statis tak diizinkan: ${engine.join(', ')}`);
+    } else {
+      const heavy = staticClosure(file).filter((item) => !isLightFile(item) && !isLightPackage(item));
+      ok(heavy.length === 0, `${file} harus tetap ringan — impor statis tak diizinkan: ${heavy.join(', ')} (muat malas dengan import())`);
+    }
     // Tema landing hanya lewat token q-*: varian dark: Tailwind tidak dipakai.
     ok(!/(^|[\s"'`])dark:[a-z]/.test(readSource(file)), `${file}: jangan memakai varian dark: Tailwind di landing (pakai token q-*)`);
   }

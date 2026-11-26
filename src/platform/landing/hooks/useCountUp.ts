@@ -25,7 +25,9 @@ export interface CountUpOptions {
 export function useCountUp<T extends HTMLElement = HTMLSpanElement>(target: number, options: CountUpOptions = {}): RefObject<T> {
   const { from = 0, duration = 1.2, delay = 0, format = formatNumber } = options;
   const ref = useRef<T>(null);
-  const inView = useInView(ref, { once: true, margin: '-40px' });
+  // Hanya tepi BAWAH yang dipersempit: margin '-40px' di keempat sisi membuat angka di gutter kiri ponsel (x < 40 px)
+  // tidak pernah dianggap terlihat, sehingga tertahan di angka awal.
+  const inView = useInView(ref, { once: true, margin: '0px 0px -40px 0px' });
   const reduced = usePrefersReducedMotion();
   const value = useMotionValue(from);
   // Pemformat biasanya fungsi inline; disimpan di ref supaya tidak mengulang animasi tiap render.

@@ -103,14 +103,15 @@ export class SuiteContext {
     await this.browser.waitForLoad();
     await this.installHelpers();
     // document 'complete' belum berarti aplikasi siap: di rute jalur, mesin SQL (WASM) masih dimuat di balik layar
-    // pemuatan; di Beranda, ringkasan masih diambil. Siap = ada tombol mode yang TERLIHAT (jalur) atau Beranda sudah
-    // menandai data-ready="true". Bila tidak kunjung siap, suite dihentikan dengan jelas alih-alih lanjut diam-diam.
+    // pemuatan; di Beranda dan halaman katalog/landing jalur, ringkasan masih diambil. Siap = ada tombol mode yang
+    // TERLIHAT (jalur), atau Beranda / halaman landing sudah menandai data-ready="true". Bila tidak kunjung siap, suite
+    // dihentikan dengan jelas alih-alih lanjut diam-diam.
     const ready = await this.evaluate<boolean>(
-      `(async () => { const isReady = () => __t.all('[aria-label="Mode aplikasi"] button').length > 0 || !!document.querySelector('[data-testid="home"][data-ready="true"]'); const t0 = Date.now(); while (Date.now() - t0 < ${READY_TIMEOUT_MS}) { if (isReady()) return true; await new Promise(r => setTimeout(r, 50)); } return false; })()`,
+      `(async () => { const isReady = () => __t.all('[aria-label="Mode aplikasi"] button').length > 0 || !!document.querySelector('[data-testid="home"][data-ready="true"], [data-testid="landing-page"][data-ready="true"]'); const t0 = Date.now(); while (Date.now() - t0 < ${READY_TIMEOUT_MS}) { if (isReady()) return true; await new Promise(r => setTimeout(r, 50)); } return false; })()`,
     );
     if (!ready) {
       const where = await this.evaluate<string>(`location.hash || '(tanpa hash)'`).catch(() => '?');
-      throw new Error(`aplikasi tidak siap dalam ${READY_TIMEOUT_MS / 1000} dtk di rute ${where} (tidak ada tombol mode yang terlihat maupun Beranda yang siap)`);
+      throw new Error(`aplikasi tidak siap dalam ${READY_TIMEOUT_MS / 1000} dtk di rute ${where} (tidak ada tombol mode yang terlihat maupun Beranda/halaman landing yang siap)`);
     }
   }
 

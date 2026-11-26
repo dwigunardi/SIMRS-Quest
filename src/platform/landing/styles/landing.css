@@ -45,9 +45,29 @@ html[data-q-landing] section[data-q-gap][data-q-tone='tint'] + section[data-q-ga
   padding-top: 0;
 }
 
+/*
+ * Latar hero halaman katalog, landing jalur, dan 404 (satu gaya untuk ketiganya): gradien diagonal permukaan → mint
+ * yang memudar ke latar halaman di dasarnya, jadi tidak ada tepi tegas dengan section berlatar halaman sesudahnya.
+ * Warna latarnya sendiri tetap dari tone Section (bg-q-bg).
+ */
+html[data-q-landing] .q-page-hero {
+  background-image:
+    linear-gradient(to bottom, rgb(var(--q-bg) / 0) 55%, rgb(var(--q-bg))),
+    linear-gradient(to bottom right, rgb(var(--q-surface)) 30%, rgb(var(--q-tint)));
+}
+
 /* Tautan dalam halaman & fokus keyboard tidak berhenti di balik navbar yang menempel (tinggi 60px). */
 html[data-q-landing] {
   scroll-padding-top: 76px;
+}
+
+/*
+ * Judul halaman yang menerima fokus setelah pindah halaman (atau lewat "Lewati ke isi utama") bukan kontrol: tanpa
+ * cincin fokus. Fokus itu untuk pembaca layar dan titik awal Tab berikutnya.
+ */
+html[data-q-landing] main h1[tabindex='-1']:focus,
+html[data-q-landing] main[tabindex='-1']:focus {
+  outline: none;
 }
 
 /* Daftar tab yang bisa digulir mendatar di layar sempit: tanpa bilah gulir. */
@@ -56,6 +76,54 @@ html[data-q-landing] {
 }
 .q-no-scrollbar::-webkit-scrollbar {
   display: none;
+}
+
+/*
+ * Titik rute peta tier mengalir ke arah Final Boss. Satu periode = panjang pola strokeDasharray "1 12" (13px), jadi
+ * putarannya mulus. Berhenti di luar layar (data-flow="off"), saat gerak dikurangi, dan saat "Jeda animasi" (q-loop).
+ */
+@keyframes q-route-flow {
+  to {
+    stroke-dashoffset: -13;
+  }
+}
+.q-route-flow {
+  animation: q-route-flow 0.8s linear infinite;
+}
+.q-route-flow[data-flow='off'] {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-q-landing] .q-route-flow {
+    animation: none;
+  }
+}
+
+/*
+ * Kartu yang melayang naik-turun pelan (dua kartu samping bola dunia di hero). Hanya transform, jadi berjalan di
+ * compositor tanpa requestAnimationFrame. "Jeda animasi" MEMBEKUKANNYA di posisi saat itu (bukan melompat ke posisi
+ * awal); gerak dikurangi mematikannya.
+ */
+@keyframes q-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -10px, 0);
+  }
+}
+.q-float {
+  animation: q-float 6s ease-in-out infinite;
+  will-change: transform;
+}
+html[data-q-landing][data-q-motion='paused'] .q-float {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-q-landing] .q-float {
+    animation: none;
+  }
 }
 
 /* Animasi CSS tak berujung (denyut penanda, titik badge) berhenti saat pengguna menekan "Jeda animasi" di navbar. */

@@ -10,12 +10,16 @@
  * ketinggian tertentu. Itu dikerjakan dengan DUA transform yang saling meniadakan (pembungkus ber-overflow-hidden naik,
  * isinya turun sejauh yang sama) — murni transform, tanpa mask/pathLength yang mengecat ulang SVG besar tiap frame.
  *
+ * Titik-titik rute hijau terus MENGALIR ke arah Final Boss (animasi CSS stroke-dashoffset, kelas q-route-flow) selama
+ * peta terlihat — jadi garisnya tetap hidup walau halaman tidak sedang digulir, juga setelah garis berhenti di tier
+ * "Kamu di sini". Aliran berhenti di luar layar, saat gerak dikurangi, dan saat "Jeda animasi" (kelas q-loop).
+ *
  * Garisnya dihitung dari posisi node yang SEBENARNYA (diukur, lalu diukur ulang tiap ukuran wadah berubah), jadi
  * tetap menyambung walau teks melipat berbeda di tiap lebar layar. Yang diukur adalah pembungkus node yang diam —
  * animasi muncul ada di elemen dalamnya — supaya hasil ukur tidak ikut bergeser.
  */
 import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
-import { motion, useMotionValue, useScroll, useSpring, useTransform, type Variants } from 'framer-motion';
+import { motion, useInView, useMotionValue, useScroll, useSpring, useTransform, type Variants } from 'framer-motion';
 import { Check, MapPin } from 'lucide-react';
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
 import { cn } from '../../lib/cn';
@@ -107,6 +111,8 @@ export function RoadmapMap({ currentTier, allDone, hereLabel, labelledBy }: Road
   const wrapRef = useRef<HTMLDivElement>(null);
   const reduced = usePrefersReducedMotion();
   const [geometry, setGeometry] = useState<Geometry | null>(null);
+  // Aliran titik hanya berjalan saat peta (hampir) terlihat; IntersectionObserver, tanpa requestAnimationFrame.
+  const flowing = useInView(wrapRef, { margin: '120px 0px' });
 
   useLayoutEffect(() => {
     const wrap = wrapRef.current;
@@ -173,7 +179,14 @@ export function RoadmapMap({ currentTier, allDone, hereLabel, labelledBy }: Road
           <motion.div aria-hidden style={{ y: lift, width: geometry.width, height: geometry.height }} className="pointer-events-none absolute left-0 top-0 overflow-hidden">
             <motion.div style={{ y: covered }} data-testid="roadmap-progress">
               <svg focusable="false" width={geometry.width} height={geometry.height} className="block" fill="none">
-                <path d={d} className="stroke-q-primary" strokeWidth={5} strokeLinecap="round" strokeDasharray="1 12" />
+                <path
+                  d={d}
+                  className="q-loop q-route-flow stroke-q-primary"
+                  data-flow={flowing ? 'on' : 'off'}
+                  strokeWidth={5}
+                  strokeLinecap="round"
+                  strokeDasharray="1 12"
+                />
               </svg>
             </motion.div>
           </motion.div>

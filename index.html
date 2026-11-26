@@ -8,10 +8,11 @@
     <script>
       // Beranda punya tema terang/gelap sendiri (src/platform/landing/hooks/useTheme.ts). Penandanya dipasang di sini,
       // sebelum gambar pertama, supaya latar tidak berkedip gelap lalu terang saat halaman dibuka. Hanya untuk rute
-      // Beranda: layar jalur selalu gelap, dan LandingRoot melepas kedua atribut ini begitu Beranda ditinggalkan.
+      // Beranda dan halaman katalog/landing jalur ('#/landing…'): layar jalur selalu gelap, dan LandingRoot melepas
+      // kedua atribut ini begitu halaman landing ditinggalkan.
       (function () {
         try {
-          if (/^#\/[^/]/.test(location.hash)) return;
+          if (/^#\/[^/]/.test(location.hash) && !/^#\/+landing(\/|$)/i.test(location.hash)) return;
           var theme = localStorage.getItem('simrs-quest:theme:v1');
           if (theme !== 'light' && theme !== 'dark') theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
           var root = document.documentElement;

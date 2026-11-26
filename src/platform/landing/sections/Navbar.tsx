@@ -1,6 +1,10 @@
 /**
  * Bagian 1 — Navbar: wordmark, menu Jalur / Fitur / Tentang, tombol utama, dan tombol tema. Menempel di atas saat
  * digulir. Di layar sempit menu pindah ke panel geser (hamburger); tombol utamanya ikut pindah ke dasar panel itu.
+ *
+ * Dipakai Beranda DAN halaman katalog/landing jalur (layout/PageLayout.tsx). `current` memberi tahu halaman mana yang
+ * sedang dibuka: di Beranda wordmark menggulir ke atas; di halaman lain wordmark menaut ke Beranda, dan menu "Jalur"
+ * menandai katalog / jalur yang sedang dibuka (aria-current="page").
  */
 import { useState, type MouseEvent } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
@@ -21,11 +25,23 @@ import { ThemeToggle } from '../ui/ThemeToggle';
 import { CTA_LABEL, type HomeMode } from './Hero';
 import { Wordmark } from './navbar/Wordmark';
 
+/** Halaman yang sedang dibuka, untuk penanda aktif di navbar & footer. */
+export type NavCurrent = { page: 'home' } | { page: 'catalog' } | { page: 'course'; id: string } | { page: 'other' };
+
+export const HOME_CURRENT: NavCurrent = { page: 'home' };
+
 export interface NavbarProps {
   /** Keadaan tombol utama — sama dengan hero: 'loading' = ringkasan belum siap (tombol belum ditampilkan). */
   mode: HomeMode;
   /** Tombol utama ("Mulai belajar" / "Lanjutkan" / "Buka jalur SQL") ditekan. */
   onStart: () => void;
+  /** Halaman yang sedang dibuka (bawaan: Beranda). */
+  current?: NavCurrent;
+}
+
+/** Tautan landing jalur `trackId` adalah halaman yang sedang dibuka? */
+function isCurrentTrack(current: NavCurrent, trackId: string): boolean {
+  return current.page === 'course' && current.id === trackId;
 }
 
 /**
@@ -65,7 +81,7 @@ function toTop(event: MouseEvent<HTMLAnchorElement>): void {
   window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
 }
 
-export function Navbar({ mode, onStart }: NavbarProps): JSX.Element {
+export function Navbar({ mode, onStart, current = HOME_CURRENT }: NavbarProps): JSX.Element {
   const [scrolled, setScrolled] = useState(false);
   const { scrollY } = useScroll();
   useMotionValueEvent(scrollY, 'change', (y) => setScrolled(y > 8));
@@ -73,26 +89,37 @@ export function Navbar({ mode, onStart }: NavbarProps): JSX.Element {
   // Label yang sama dengan tombol hero: semua misi tuntas → "Buka jalur SQL", bukan "Lanjutkan".
   const ctaLabel = CTA_LABEL[mode];
   const showCta = mode !== 'loading';
+  const atHome = current.page === 'home';
+  const inTracks = current.page === 'catalog' || current.page === 'course';
+  const allTracks = NAV.tracks.all;
 
   return (
     <header className="sticky top-0 z-40 bg-q-bg/90 backdrop-blur-md">
       <Container className="flex h-q-nav items-center gap-2 sm:gap-3">
-        <a href={ROUTES.home} onClick={toTop} aria-label={`${PRODUCT_NAME}: ${NAV.homeLabel}`} className="-ml-1 inline-flex h-10 shrink-0 items-center rounded-q px-1 no-underline">
+        <a
+          href={ROUTES.home}
+          onClick={atHome ? toTop : undefined}
+          aria-label={atHome ? `${PRODUCT_NAME}: ${NAV.homeLabel}` : `${PRODUCT_NAME}: ${NAV.homeLink}`}
+          className="-ml-1 inline-flex h-10 shrink-0 items-center rounded-q px-1 no-underline"
+          data-testid="nav-home"
+        >
           <Wordmark />
         </a>
 
         <NavMenu ariaLabel={NAV.ariaLabel} className="ml-3 hidden lg:block">
-          <NavDropdown label={NAV.tracks.label} panelClassName="w-[380px]">
+          <NavDropdown label={NAV.tracks.label} panelClassName="w-[380px]" active={inTracks}>
             {TRACKS.map((track) => (
               <NavDropdownLink
                 key={track.id}
-                href={track.href}
+                href={track.landingHref}
                 title={track.title}
                 description={track.tagline}
                 icon={<Icon name={track.icon} />}
                 badge={track.status === 'segera' ? SOON_CHIP : undefined}
+                current={isCurrentTrack(current, track.id)}
               />
             ))}
+            <NavDropdownLink href={allTracks.href} title={allTracks.label} description={allTracks.description} icon={<Icon name={allTracks.icon} />} current={current.page === 'catalog'} />
           </NavDropdown>
           <NavDropdown label={NAV.features.label}>
             {NAV.features.items.map((item) => (
@@ -134,10 +161,19 @@ export function Navbar({ mode, onStart }: NavbarProps): JSX.Element {
           >
             <MobileMenuSection title={NAV.tracks.label}>
               {TRACKS.map((track) => (
-                <MobileMenuLink key={track.id} href={track.href} icon={<Icon name={track.icon} />} badge={track.status === 'segera' ? SOON_CHIP : undefined}>
+                <MobileMenuLink
+                  key={track.id}
+                  href={track.landingHref}
+                  icon={<Icon name={track.icon} />}
+                  badge={track.status === 'segera' ? SOON_CHIP : undefined}
+                  current={isCurrentTrack(current, track.id)}
+                >
                   {track.title}
                 </MobileMenuLink>
               ))}
+              <MobileMenuLink href={allTracks.href} icon={<Icon name={allTracks.icon} />} current={current.page === 'catalog'}>
+                {allTracks.label}
+              </MobileMenuLink>
             </MobileMenuSection>
             <MobileMenuSection title={NAV.features.label}>
               {NAV.features.items.map((item) => (
