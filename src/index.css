@@ -23,6 +23,10 @@
   html[data-theme='light']:not([data-q-landing]) ::selection {
     @apply bg-emerald-950/60;
   }
+  /* Pintasan keyboard ("Ctrl + Enter") tidak boleh terpotong ke dua baris. */
+  kbd {
+    white-space: nowrap;
+  }
 }
 
 @layer utilities {
