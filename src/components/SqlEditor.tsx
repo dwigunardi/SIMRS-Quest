@@ -193,27 +193,30 @@ export function SqlEditor({
         />
       ) : null}
 
-      <div className="flex items-center justify-between gap-2 border-t border-slate-800 bg-slate-900/70 px-3 py-1.5 text-[11px] text-slate-500">
-        <span className="flex min-w-0 items-center gap-1.5">
+      {/* Bilah bawah: tiap bagian utuh satu baris (tidak terbelah). Bila ruang kurang, bagian berikutnya turun baris;
+          petunjuk panjang mengisi sisa ruang dan terpotong "…". Pintasan keyboard disembunyikan di layar sentuh kecil
+          (< sm), sama seperti keycap di tombol Run. */}
+      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 border-t border-slate-800 bg-slate-900/70 px-3 py-1.5 text-[11px] text-slate-500">
+        <span className="hidden shrink-0 items-center gap-1.5 whitespace-nowrap sm:inline-flex">
           <kbd className="rounded border border-slate-700 bg-slate-800 px-1.5 py-px font-mono text-[10px] text-slate-300">
             {RUN_SHORTCUT_LABEL}
           </kbd>
           <span>untuk menjalankan</span>
-          {onExplain ? (
-            <span className="hidden items-center gap-1.5 md:inline-flex">
-              ·
-              <kbd className="rounded border border-slate-700 bg-slate-800 px-1.5 py-px font-mono text-[10px] text-slate-300">
-                {EXPLAIN_SHORTCUT_LABEL}
-              </kbd>
-              <span>untuk Explain</span>
-            </span>
-          ) : null}
-          <span id={hintId} className="hidden truncate sm:inline">
-            · Saran muncul saat mengetik (Tab/Enter untuk memilih, Ctrl+Space untuk memunculkan) · Tab = indentasi, Esc lalu
-            Tab untuk keluar dari editor
-          </span>
         </span>
-        <span className="shrink-0 font-mono tabular-nums">
+        {onExplain ? (
+          <span className="hidden shrink-0 items-center gap-1.5 whitespace-nowrap md:inline-flex">
+            ·
+            <kbd className="rounded border border-slate-700 bg-slate-800 px-1.5 py-px font-mono text-[10px] text-slate-300">
+              {EXPLAIN_SHORTCUT_LABEL}
+            </kbd>
+            <span>untuk Explain</span>
+          </span>
+        ) : null}
+        <span id={hintId} className="hidden min-w-0 flex-1 truncate sm:block">
+          · Saran muncul saat mengetik (Tab/Enter untuk memilih, Ctrl+Space untuk memunculkan) · Tab = indentasi, Esc lalu
+          Tab untuk keluar dari editor
+        </span>
+        <span className="ml-auto shrink-0 whitespace-nowrap font-mono tabular-nums">
           {lineCount} baris · {value.length} karakter
         </span>
       </div>
