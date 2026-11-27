@@ -160,7 +160,7 @@ function PortalForm({ mission, input, onInputChange, onSubmit, ready, safeMode, 
   };
 
   return (
-    <section className="overflow-hidden rounded-xl border border-slate-700 bg-slate-900 shadow-lg shadow-black/30">
+    <section className="overflow-hidden rounded-xl border border-slate-700 bg-slate-900 shadow-lg shadow-black/30 light:shadow-slate-500/15">
       <div className="flex items-center gap-2 border-b border-slate-800 bg-slate-950/80 px-3 py-2" aria-hidden>
         <span className="h-2.5 w-2.5 rounded-full bg-rose-500/70" />
         <span className="h-2.5 w-2.5 rounded-full bg-amber-500/70" />
@@ -170,8 +170,9 @@ function PortalForm({ mission, input, onInputChange, onSubmit, ready, safeMode, 
           portal.rs-latihan.local/{pathSlug}
         </span>
       </div>
-      <div className="border-b border-slate-800 bg-gradient-to-r from-teal-600/30 via-emerald-600/20 to-transparent px-4 py-2.5">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-teal-300/80">RS Latihan · Portal Internal</p>
+      {/* Tema terang: pita portal memakai tint cerah (800) supaya tetap pucat; teks penuh tanpa alfa. */}
+      <div className="border-b border-slate-800 bg-gradient-to-r from-teal-600/30 via-emerald-600/20 to-transparent px-4 py-2.5 light:from-teal-800/25 light:via-emerald-800/15">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-teal-300/80 light:text-teal-300">RS Latihan · Portal Internal</p>
         <h3 className="text-sm font-bold text-slate-100">{lab.formTitle}</h3>
       </div>
       <form onSubmit={handleSubmit} className="space-y-2 px-4 py-4">
@@ -190,12 +191,12 @@ function PortalForm({ mission, input, onInputChange, onSubmit, ready, safeMode, 
             autoCapitalize="off"
             autoComplete="off"
             autoCorrect="off"
-            className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-violet-500/60 focus:ring-1 focus:ring-violet-500/30"
+            className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-violet-500/60 focus:ring-1 focus:ring-violet-500/30 light:border-slate-600/80 light:focus:border-violet-500 light:focus:ring-violet-500"
           />
           <button
             type="submit"
             disabled={!ready || busy}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-violet-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-violet-500/20 transition hover:bg-violet-400 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-violet-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-violet-500/20 transition hover:bg-violet-400 disabled:cursor-not-allowed disabled:opacity-50 light:disabled:bg-slate-800 light:disabled:text-slate-500 light:disabled:opacity-100 light:disabled:shadow-none"
           >
             <Send className="h-4 w-4" aria-hidden />
             Kirim

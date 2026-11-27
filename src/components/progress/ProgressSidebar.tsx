@@ -57,7 +57,7 @@ export function ProgressSidebar({ report, missions, tiers, progress }: ProgressS
                   </span>
                 </div>
                 <div className="h-1.5 overflow-hidden rounded-full bg-slate-800" aria-hidden>
-                  <div className="h-full rounded-full bg-emerald-400/80" style={{ width: `${pct}%` }} />
+                  <div className="h-full rounded-full bg-emerald-400/80 light:bg-emerald-600" style={{ width: `${pct}%` }} />
                 </div>
               </li>
             );

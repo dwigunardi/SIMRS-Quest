@@ -3,7 +3,7 @@
  * (draf, timer ujian, dan kumpul otomatis tetap hidup di balik Beranda), riwayat browser dua arah, ringkasan pengguna
  * lama, tautan masuk ('#/sql/ujian' dkk.), pengalihan rute yang tidak ada (jalur 'segera' → landing-nya; katalog &
  * landing jalur sendiri diuji suite 'courses'), karantina data rusak, pulihkan cadangan,
- * tema terang/gelap yang hanya milik Beranda, interaksi landing (tab, accordion, mockup, menu layar sempit & lebar,
+ * tema terang/gelap bersama Beranda ↔ layar jalur, interaksi landing (tab, accordion, mockup, menu layar sempit & lebar,
  * korsel), gerak (jeda animasi, gerak dikurangi, halaman yang benar-benar diam), posisi gulir, dan dua kegagalan
  * unduhan (ringkasan progres, bagian bawah halaman).
  *
@@ -14,7 +14,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { MISSIONS } from '../../../src/data/missions';
 import { PROGRESS_KEY, progressWith, type SuiteContext } from '../context';
-import { AT_HOME_URL, BACKDROP, HOME_READY, LANDING_PAGE, RESOURCE_BUFFER, TRACK_READY, WASM_REQUESTS, kit, tid, type Backdrop, type Kit } from '../kit';
+import { AT_HOME_URL, BACKDROP, HOME_READY, LANDING_PAGE, RESOURCE_BUFFER, TRACK_DARK_BODY, TRACK_READY, WASM_REQUESTS, kit, looksDarkTrack, looksLightTrack, tid, type Backdrop, type Kit } from '../kit';
 
 const SESSION_KEY = 'simrs-sql-quest:exam-session:v1';
 const EXAMS_KEY = 'simrs-sql-quest:exams:v1';
@@ -577,9 +577,8 @@ async function theme(t: SuiteContext, k: Kit): Promise<void> {
       `({ theme: document.documentElement.getAttribute('data-theme'), landing: document.documentElement.hasAttribute('data-q-landing'), dark: document.documentElement.classList.contains('dark'), saved: localStorage.getItem(${JSON.stringify(THEME_KEY)}) })`,
     );
   const backdrop = () => t.evaluate<Backdrop>(BACKDROP);
-  const show = (b: Backdrop) => `body ${b.bodyColor} (L ${b.body.toFixed(3)}), ${Math.round(b.dark * 100)}% titik gelap, paling terang ${b.brightest.toFixed(2)}`;
-  /** Layar jalur: latar body gelap, hampir semua permukaan gelap, tidak ada permukaan terang (putih/mint landing). */
-  const looksDark = (b: Backdrop) => b.body < 0.05 && b.dark >= 0.85 && b.brightest < 0.75;
+  const show = (b: Backdrop) => `body ${b.bodyColor} (L ${b.body.toFixed(3)}), ${Math.round(b.dark * 100)}% titik gelap, ${Math.round(b.light * 100)}% terang, paling terang ${b.brightest.toFixed(2)}`;
+  const trackToggle = () => t.evaluate<{ label: string; current: string } | null>(`(() => { const b = __t.all('[data-testid="track-theme-toggle"]')[0]; return b ? { label: b.getAttribute('aria-label'), current: b.dataset.themeCurrent } : null; })()`);
 
   try {
     await prefer('light');
@@ -604,31 +603,58 @@ async function theme(t: SuiteContext, k: Kit): Promise<void> {
     const reloaded = await htmlState();
     t.check('setelah muat ulang tema pilihan tetap (walau sistem gelap)', reloaded.theme === 'light' && reloaded.landing && reloaded.saved === 'light', JSON.stringify(reloaded));
 
-    // Tema landing TERANG → layar jalur tetap gelap.
+    // Tema berlaku untuk seluruh aplikasi: dari Beranda TERANG, layar jalur ikut terang.
     await k.click('home-primary');
     await k.waitTrack();
     await t.evaluate(`__t.waitText(${JSON.stringify(FIRST.title)}, 20000)`);
+    await t.sleep(300);
     const inTrack = await htmlState();
-    const trackFromLight = await backdrop();
-    t.check('masuk jalur dari landing terang: layar jalur tetap gelap', looksDark(trackFromLight) && inTrack.theme === null && !inTrack.landing && inTrack.dark, `${show(trackFromLight)}; ${JSON.stringify(inTrack)}`);
+    const trackLight = await backdrop();
+    t.check('masuk jalur dari Beranda terang: layar jalur ikut terang, penanda landing dilepas', looksLightTrack(trackLight) && inTrack.theme === 'light' && !inTrack.landing && inTrack.dark, `${show(trackLight)}; ${JSON.stringify(inTrack)}`);
+    const toggle0 = await trackToggle();
+    t.check('header jalur punya tombol tema berlabel aksi', toggle0?.label === 'Ganti ke tema gelap' && toggle0.current === 'light', JSON.stringify(toggle0));
 
-    // Kembali: tema pilihan pulih; ganti ke gelap → jalur (hangat) tetap sama gelapnya.
+    // Tombol tema di header jalur → gelap: tersimpan, label berganti, dan tampilannya gelap seperti sebelum ada tema terang.
+    await t.evaluate(`__t.all('[data-testid="track-theme-toggle"]')[0].click(); true`);
+    await k.waitFor(`document.documentElement.getAttribute('data-theme') === 'dark'`, 3000);
+    await t.sleep(300);
+    const toggled1 = await htmlState();
+    const trackDark = await backdrop();
+    const toggle1 = await trackToggle();
+    t.check('tombol tema di jalur menyimpan tema gelap', toggled1.saved === 'dark' && !toggled1.landing && toggle1?.label === 'Ganti ke tema terang' && toggle1.current === 'dark', `${JSON.stringify(toggled1)} ${JSON.stringify(toggle1)}`);
+    t.check(`layar jalur gelap persis seperti dulu (body ${TRACK_DARK_BODY})`, looksDarkTrack(trackDark), show(trackDark));
+
+    // Kembali ke Beranda: pilihan dari jalur berlaku di Beranda.
     await k.headerHome();
     const backHome = await htmlState();
-    t.check('kembali ke Beranda: tema pilihan pulih', backHome.theme === 'light' && backHome.landing && (await backdrop()).body > 0.7, JSON.stringify(backHome));
+    t.check('kembali ke Beranda: tema yang dipilih di jalur berlaku', backHome.theme === 'dark' && backHome.landing && (await backdrop()).body < 0.05, JSON.stringify(backHome));
     await k.click('theme-toggle');
-    await k.waitFor(`document.documentElement.getAttribute('data-theme') === 'dark'`, 3000);
-    t.check('toggle kedua menyimpan tema gelap', (await htmlState()).saved === 'dark');
+    await k.waitFor(`document.documentElement.getAttribute('data-theme') === 'light'`, 3000);
+    t.check('toggle di Beranda menyimpan tema terang lagi', (await htmlState()).saved === 'light');
     await k.click('home-primary');
     await k.waitTrack();
     await t.sleep(300);
     const inTrack2 = await htmlState();
-    const trackFromDark = await backdrop();
-    t.check(
-      'masuk jalur dari landing gelap: layar jalur sama gelapnya',
-      looksDark(trackFromDark) && trackFromDark.bodyColor === trackFromLight.bodyColor && inTrack2.theme === null && !inTrack2.landing,
-      `${show(trackFromDark)}; ${JSON.stringify(inTrack2)}`,
-    );
+    const trackLight2 = await backdrop();
+    t.check('jalur hangat ikut berganti terang tanpa dimuat ulang', looksLightTrack(trackLight2) && trackLight2.bodyColor === trackLight.bodyColor && inTrack2.theme === 'light' && !inTrack2.landing, `${show(trackLight2)}; ${JSON.stringify(inTrack2)}`);
+
+    // Membuka '#/sql' langsung dengan tema terang tersimpan: data-theme sudah terpasang sebelum React (tanpa kedipan
+    // gelap → terang) dan tanpa penanda landing; tema sistem gelap tidak mengalahkan pilihan tersimpan.
+    await prefer('dark');
+    const early = (await k.send('Page.addScriptToEvaluateOnNewDocument', {
+      // Dicatat saat <body> pertama kali dibuat parser — sebelum gambar pertama dan sebelum skrip modul React jalan.
+      source: `new MutationObserver((_, obs) => { if (document.body) { window.__earlyTheme = { theme: document.documentElement.getAttribute('data-theme'), landing: document.documentElement.hasAttribute('data-q-landing') }; obs.disconnect(); } }).observe(document, { childList: true, subtree: true });`,
+    })) as { identifier?: string };
+    try {
+      await k.freshRaw({ [THEME_KEY]: 'light' }, '#/sql');
+      await k.waitTrack();
+      const first = await t.evaluate<{ theme: string | null; landing: boolean } | null>(`window.__earlyTheme ?? null`);
+      const direct = await backdrop();
+      t.check("'#/sql' dibuka langsung: data-theme='light' terpasang sebelum <body> dibuat (tanpa penanda landing)", first?.theme === 'light' && !first.landing, JSON.stringify(first));
+      t.check("'#/sql' dibuka langsung: layar jalur terang walau sistem gelap", looksLightTrack(direct), show(direct));
+    } finally {
+      if (early.identifier) await k.send('Page.removeScriptToEvaluateOnNewDocument', { identifier: early.identifier });
+    }
   } finally {
     await prefer(null);
   }
@@ -734,8 +760,18 @@ async function landing(t: SuiteContext, k: Kit): Promise<void> {
   // ---- Menu navbar layar lebar ----
   const navTrigger = (label: string) => `__t.all('header nav button').find(b => b.innerText.trim() === ${JSON.stringify(label)})`;
   await t.evaluate(`scrollTo({ top: 0, behavior: 'instant' }); true`);
-  await k.mouseClick(navTrigger('Jalur'));
-  const tracksOpen = await k.waitFor(`${navTrigger('Jalur')}?.getAttribute('aria-expanded') === 'true' && __t.all('header a[href="#/landing/sql"]').length > 0`, 4000);
+  // Pemicu NavigationMenu Radix membuka menu saat penunjuk lewat DAN mengganti (toggle) saat diklik: gerak + klik
+  // sintetis yang hampir bersamaan kadang membuka-lalu-menutupnya, bergantung waktu (±separuh percobaan di mesin ini,
+  // dev maupun preview). Klik diulang (penunjuk dijauhkan dulu) sampai menu terbuka; isi menu tetap diperiksa utuh.
+  let tracksOpen = false;
+  for (let attempt = 0; attempt < 3 && !tracksOpen; attempt += 1) {
+    if (attempt > 0) {
+      await k.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 5, y: 600 });
+      await t.sleep(500);
+    }
+    await k.mouseClick(navTrigger('Jalur'));
+    tracksOpen = await k.waitFor(`${navTrigger('Jalur')}?.getAttribute('aria-expanded') === 'true' && __t.all('header a[href="#/landing/sql"]').length > 0`, attempt === 2 ? 4000 : 1500);
+  }
   const tracksMenu = await t.evaluate<{ links: string[]; soon: number; disabled: number }>(`(() => { const root = __t.all('header a[href="#/landing/sql"]')[0]?.closest('[data-state="open"]'); if (!root) return { links: [], soon: -1, disabled: -1 }; const links = [...root.querySelectorAll('a[href]')]; return { links: links.map(a => a.getAttribute('href')), soon: links.filter(a => /Segera/.test(a.innerText)).length, disabled: root.querySelectorAll('[aria-disabled="true"]').length }; })()`);
   t.check(
     'menu "Jalur": setiap jalur menaut ke landing-nya (empat bertanda "Segera") + "Semua jalur" ke katalog',

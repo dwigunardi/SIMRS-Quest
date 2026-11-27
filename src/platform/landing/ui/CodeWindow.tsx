@@ -1,7 +1,8 @@
 /**
  * Jendela editor gelap untuk mockup: bilah judul dengan tab berkas, nomor baris, isi yang disorot penyorot SQL
- * aplikasi (lib/sqlHighlight), slot footer (tombol) dan slot panel (hasil). Warnanya SAMA di tema terang dan gelap,
- * karena meniru layar jalur yang memang selalu gelap.
+ * aplikasi (lib/sqlHighlight), slot footer (tombol) dan slot panel (hasil). Warnanya SAMA di tema terang dan gelap:
+ * jendela ini sengaja selalu gelap seperti editor kode pada umumnya (layar jalur sendiri ikut tema aplikasi; di
+ * halaman landing kelas palet tetap bernilai asli/gelap karena html[data-q-landing], lihat src/theme.css).
  *
  * Efek mengetik (`typing`): kode muncul huruf demi huruf begitu jendela terlihat; tinggi jendela sudah dipesan sejak
  * awal jadi tata letak tidak melompat. Dengan reduced motion kode langsung tampil utuh.

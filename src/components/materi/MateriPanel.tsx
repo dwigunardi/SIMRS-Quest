@@ -107,7 +107,7 @@ export function MateriPanel({
           </p>
         )}
         <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-slate-500">
-          <BookOpenCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500/70" aria-hidden />
+          <BookOpenCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500/70 light:text-emerald-500" aria-hidden />
           Gratis: membaca materi tidak mengurangi XP. Contohnya memakai kasus lain, bukan jawaban misi — tekan Jalankan untuk melihat
           hasilnya di database awal.
         </p>

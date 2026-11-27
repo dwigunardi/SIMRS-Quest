@@ -1,4 +1,6 @@
 @import './fonts.css';
+/* Palet layar jalur berbasis variabel (gelap = Tailwind asli, terang = html[data-theme='light']). */
+@import './theme.css';
 
 @tailwind base;
 @tailwind components;
@@ -16,19 +18,24 @@
   ::selection {
     @apply bg-emerald-500/30;
   }
+  /* Tema terang: bg-emerald-500/30 berupa hijau tua transparan yang menurunkan teks redup & aksen yang dipilih sampai
+     ±3.4:1. Mint pucat menjaganya ≥ 4.5:1 (scripts/verify/theme.ts menghitungnya). Editor SQL punya aturan sendiri. */
+  html[data-theme='light']:not([data-q-landing]) ::selection {
+    @apply bg-emerald-950/60;
+  }
 }
 
 @layer utilities {
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: rgb(51 65 85) transparent;
+    scrollbar-color: rgb(var(--c-scrollbar)) transparent;
   }
   .scrollbar-thin::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background-color: rgb(51 65 85);
+    background-color: rgb(var(--c-scrollbar));
     border-radius: 9999px;
   }
   .scrollbar-thin::-webkit-scrollbar-track {

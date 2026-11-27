@@ -4,7 +4,7 @@ import { MAX_EXPLAINED_STATEMENTS } from '../../lib/planTree';
 import { EXPLAIN_SHORTCUT_LABEL } from '../../lib/platform';
 import { SqlErrorCard, keyForObject } from '../MissionOutput';
 import { PlanStatementCard } from './PlanStatementCard';
-import { LEGEND_TONES, TONE_STYLE } from './planStyle';
+import { LEGEND_TONES, TONE_STYLE, accentClass } from './planStyle';
 
 export interface QueryPlanViewProps {
   plan: PlaygroundPlan | null;
@@ -31,7 +31,7 @@ function IdleState({ ready, onExplain }: { ready: boolean; onExplain: () => void
         type="button"
         onClick={onExplain}
         disabled={!ready}
-        className="inline-flex items-center gap-2 rounded-lg border border-sky-500/40 bg-sky-500/10 px-3 py-1.5 text-sm font-semibold text-sky-200 transition hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+        className="inline-flex items-center gap-2 rounded-lg border border-sky-500/40 bg-sky-500/10 px-3 py-1.5 text-sm font-semibold text-sky-200 transition hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50 light:disabled:border-slate-700 light:disabled:bg-slate-900 light:disabled:text-slate-500 light:disabled:opacity-100"
       >
         <ListTree className="h-4 w-4" aria-hidden="true" />
         Explain query di editor
@@ -48,7 +48,7 @@ function Legend(): JSX.Element {
     <ul className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-500" aria-label="Arti warna">
       {LEGEND_TONES.map((tone) => (
         <li key={tone} className="inline-flex items-center gap-1.5">
-          <span className={`h-2.5 w-2.5 rounded-sm ${TONE_STYLE[tone].accent}`} aria-hidden="true" />
+          <span className={`h-2.5 w-2.5 rounded-sm ${accentClass(TONE_STYLE[tone])}`} aria-hidden="true" />
           {TONE_STYLE[tone].label}
         </li>
       ))}
@@ -89,7 +89,7 @@ function AppliedBanner({ applied }: { applied: AppliedSuggestion }): JSX.Element
         <p>
           Dijalankan di database sesi: <code className="break-all font-mono text-emerald-300">{applied.sql}</code>
         </p>
-        <p className="text-emerald-200/70">
+        <p className="text-emerald-200/70 light:text-emerald-200">
           Plan di bawah sudah diperbarui — bandingkan dengan sebelumnya. Index ini bertahan sampai Reset Database.
         </p>
       </div>

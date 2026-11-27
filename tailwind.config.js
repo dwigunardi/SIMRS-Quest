@@ -1,8 +1,29 @@
+import plugin from 'tailwindcss/plugin';
+
 /**
  * Warna landing (Beranda) berawalan `q`: nilainya variabel CSS "R G B" yang ditukar lewat html[data-theme]
  * (src/platform/landing/styles/tokens.css), jadi alpha tetap bisa dipakai: bg-q-primary/20.
  */
 const q = (name) => `rgb(var(--q-${name}) / <alpha-value>)`;
+
+/**
+ * Palet yang dipakai layar jalur, didefinisikan ulang sebagai variabel CSS "R G B" (src/theme.css): nilai bawaan =
+ * Tailwind asli (tema gelap, identik dengan sebelumnya), nilai terang hanya di html[data-theme='light'] tanpa
+ * data-q-landing. Pengubah opasitas tetap bekerja (bg-emerald-500/10). Memakai palet LAIN di layar jalur (mis. red,
+ * blue) berarti warnanya tidak ikut tema — tambahkan dulu di sini dan di src/theme.css (scripts/verify/theme.ts
+ * menolak palet yang tidak berbasis variabel).
+ */
+export const THEMED_PALETTES = ['slate', 'emerald', 'amber', 'rose', 'sky', 'cyan', 'teal', 'violet', 'orange', 'yellow', 'fuchsia'];
+export const SHADES = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900', '950'];
+const themed = Object.fromEntries(
+  THEMED_PALETTES.map((name) => [name, Object.fromEntries(SHADES.map((shade) => [shade, `rgb(var(--c-${name}-${shade}) / <alpha-value>)`]))]),
+);
+
+/**
+ * Selektor varian `light:` — penyesuaian khusus tema terang di komponen layar jalur (mis. `text-white light:text-slate-50`).
+ * Sama dengan lingkup palet terang di src/theme.css; tidak pernah aktif di halaman landing. Varian dark: TIDAK dipakai.
+ */
+export const LIGHT_SELECTOR = "html[data-theme='light']:not([data-q-landing])";
 
 /** @type {import('tailwindcss').Config} */
 export default {
@@ -17,6 +38,7 @@ export default {
         'q-display': ['Orbitron', '"Varela Round"', 'ui-rounded', 'system-ui', 'sans-serif'],
       },
       colors: {
+        ...themed,
         q: {
           bg: q('bg'),
           surface: q('surface'),
@@ -134,5 +156,9 @@ export default {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    plugin(({ addVariant }) => {
+      addVariant('light', `${LIGHT_SELECTOR} &`);
+    }),
+  ],
 };

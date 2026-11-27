@@ -39,9 +39,9 @@ export const MISSION_KIND_META: Record<MissionKind, MissionKindMeta> = {
   boss: {
     label: 'Boss',
     icon: Crown,
-    badgeClass: 'border-yellow-400/50 bg-yellow-400/10 text-yellow-200',
+    badgeClass: 'border-yellow-400/50 bg-yellow-400/10 text-yellow-200 light:border-yellow-700/50 light:bg-yellow-950/40',
     iconClass: 'text-yellow-300',
-    chipClass: 'bg-yellow-400/15 text-yellow-200',
+    chipClass: 'bg-yellow-400/15 text-yellow-200 light:bg-yellow-950/50',
   },
   predict: {
     label: 'Tebak Hasil',

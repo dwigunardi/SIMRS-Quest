@@ -90,15 +90,88 @@ database latihan, contoh misi di peragaan (query, hasil, hint, perbedaan), label
 daftar kata yang tidak boleh muncul karena fiturnya tidak ada. Peragaan yang bukan tiruan layar diberi keterangan —
 mis. kalender di panel Streak hanya ilustrasi (aplikasi menyimpan angka streak, bukan riwayat per hari).
 
-**Tema terang/gelap** hanya milik Beranda (dan halaman katalog/landing jalur): atribut `data-theme` pada `<html>` menukar variabel CSS
-(`src/platform/landing/styles/tokens.css`, kelas Tailwind berawalan `q-`). Pilihan disimpan di `localStorage`
-(`simrs-quest:theme:v1`); sebelum pernah memilih, tema mengikuti `prefers-color-scheme`. Layar jalur selalu gelap, dan
-atribut tema dilepas begitu Beranda ditinggalkan. Kontras tiap pasangan warna dihitung (WCAG AA) di `npm run verify`.
+**Tema terang/gelap** Beranda sama dengan tema seluruh aplikasi (lihat [Tema terang/gelap](#tema-teranggelap)). Di
+Beranda dan halaman landing, atribut `data-theme` pada `<html>` memilih variabel CSS di
+`src/platform/landing/styles/tokens.css` (kelas Tailwind berawalan `q-`). Kontras tiap pasangan token dihitung (WCAG AA)
+di `npm run verify`.
 
 **Gerak**: animasi memakai framer-motion dan menghormati `prefers-reduced-motion`. Tombol jeda di navbar menghentikan
 semua gerak yang berjalan sendiri (pita, kata berganti, bola dunia, maskot) tanpa bergantung pada pengaturan sistem, dan
 gerak berulang berhenti sendiri saat berada di luar layar — halaman yang tidak sedang menganimasikan apa pun tidak
 meminta satu frame pun.
+
+### Tema terang/gelap
+
+Satu tema berlaku untuk **seluruh aplikasi**: Beranda, halaman katalog/landing jalur, dan layar jalur SQL (editor,
+hasil, Materi, Playground & Lab Performa, Progres, Ujian, layar muat/gagal, popup, dan notifikasi). Sumbernya satu store,
+`src/platform/theme.ts`.
+
+- Pilihan disimpan di `localStorage` (`simrs-quest:theme:v1`, teks `light`/`dark`). Sebelum pengguna memilih, tema
+  mengikuti `prefers-color-scheme` dan ikut berubah bila pengaturan sistem diganti. Tab lain ikut berganti lewat event
+  `storage`.
+- Tombol tema (ikon matahari/bulan) ada di navbar Beranda & halaman landing, dan di header jalur SQL. Labelnya menyebut
+  aksinya, mis. "Ganti ke tema terang", dan kedua tombol memakai label yang sama (`THEME_TOGGLE_LABEL`). Pilihan di satu
+  tempat langsung berlaku di tempat lain, termasuk jalur hangat yang sedang tersembunyi.
+- **Tanpa kedipan.** Skrip kecil di `index.html` memasang `data-theme` pada `<html>` sebelum gambar pertama, untuk semua
+  rute. Ini berlaku juga saat `#/sql` dibuka langsung dan saat penyimpanan diblokir (tema lalu mengikuti sistem).
+  `data-q-landing` hanya dipasang untuk Beranda dan halaman landing, memakai aturan rute yang sama dengan `parseRoute`
+  (jadi `#//sql` tetap dikenali sebagai jalur). Setelah React jalan, cangkang platform yang menjaga atribut itu.
+- Portal (popup autocomplete, notifikasi lencana) ikut tema karena variabelnya ada di tingkat `<html>`.
+
+**Palet berbasis variabel.** Layar jalur memakai kelas palet Tailwind biasa (`bg-slate-900`, `text-emerald-300`,
+`bg-amber-500/10`, dan sebagainya). Sebelas palet yang dipakainya (slate, emerald, amber, rose, sky, cyan, teal, violet,
+orange, yellow, fuchsia; shade 50–950) didefinisikan ulang di `tailwind.config.js` sebagai
+`rgb(var(--c-<palet>-<shade>) / <alpha-value>)`, sehingga pengubah opasitas tetap bekerja. Nilainya ada di
+`src/theme.css`:
+
+- `:root` adalah **tema gelap**, berisi nilai Tailwind asli persis. Karena itu tampilan gelap identik dengan sebelum ada
+  tema terang, dan `npm run verify` membandingkannya per kanal.
+- `html[data-theme='light']:not([data-q-landing])` berisi **palet terang yang dihitung** ("cermin kontras"). Angka shade
+  tetap memegang peran yang sama, hanya terang/gelapnya yang terbalik:
+
+  | Shade | Netral (slate) | Aksen |
+  |---|---|---|
+  | 950 | halaman (putih) | tint pucat, mis. `bg-emerald-950/35` |
+  | 900–700 | panel, isian, garis | warna cerah untuk batang & titik |
+  | 600–500 | teks redup (≥ 4.5:1) | isian tombol; `text-slate-950` di atasnya menjadi putih |
+  | 400–50 | teks sekunder → judul | warna tua untuk teks & ikon |
+
+  `emerald-500` terang sengaja disamakan dengan tombol utama Beranda (`#00875A`); di tema gelap keduanya memang sudah
+  sama (`#10B981`).
+- Di halaman landing (ada `data-q-landing`), semua `--c-*` tetap bernilai asli, jadi kelas palet yang dipakai di sana
+  tidak ikut berubah.
+- Hal yang tidak bisa diselesaikan palet ditulis di komponen dengan varian **`light:`** (`tailwind.config.js`, memakai
+  selektor yang sama). Contohnya teks `text-white`, bayangan hitam, tint hijau tua yang menjadi abu-abu di atas putih,
+  dan kontrol nonaktif yang diredupkan dengan opacity: `text-white light:text-slate-50`,
+  `bg-emerald-500/15 light:bg-emerald-950/35`. Kelas dasar (tampilan gelap) tidak pernah diubah demi tema terang, dan
+  varian `dark:` tidak dipakai.
+
+**Menambah warna dengan benar:**
+
+1. Pakai palet bertema yang sudah ada. Kelas biasa langsung ikut tema; lihat hasilnya di tema terang (tombol di header
+   jalur), lalu jalankan `npm run verify`.
+2. Butuh palet lain, mis. `red`? Tambahkan namanya ke `THEMED_PALETTES` di `tailwind.config.js` dan `THEMED` di
+   `scripts/verify/themePairs.ts`. Setelah itu tulis **semua** shade-nya di `src/theme.css`: nilai Tailwind asli di
+   `:root`, nilai terang yang dihitung di blok terang (`--c-red-500: R G B;`). Tanpa langkah ini verify menolak kelasnya,
+   karena warnanya tidak akan ikut tema.
+3. Jangan menulis warna mati (`#hex`, `rgb(…)`) di className layar jalur. Untuk nilai arbitrer, pakai fungsi tema yang
+   ikut variabel, mis. `drop-shadow-[0_0_8px_theme(colors.amber.400/60%)]`. Verify memberi peringatan untuk warna mati.
+4. Bila sebuah pasangan warna lolos di tema gelap tetapi gagal di tema terang, tambahkan varian `light:` di komponennya
+   tanpa mengubah kelas dasar. Dua jebakan yang perlu diingat:
+   - `light:from-*` mereset `--tw-gradient-to`, jadi tulis ulang `light:to-*`.
+   - `light:border-*` dan `light:bg-*` mengalahkan `focus:*`/`disabled:*` dasar, jadi tambahkan juga `light:focus:*` dan
+     `light:disabled:*`.
+
+**Pemeriksaan kontras** ada di dua tempat:
+
+- `npm run verify`, bagian *Tema layar jalur* (lihat [Skrip npm](#skrip-npm)). Kontras setiap pasangan warna
+  di kode dihitung di kedua tema; tema terang wajib lolos WCAG AA.
+- Suite E2E `theme` (lihat [Uji E2E](#uji-e2e-di-browser)). Pemindai kontras di halaman berjalan di setiap layar dan
+  keadaan jalur, untuk kedua tema dan dua lebar.
+
+Tema gelap masih punya pelanggaran AA yang sudah ada sebelum tema terang, mis. teks `slate-500` di panel. Pelanggaran itu
+sengaja tidak diubah supaya tampilan gelap tetap identik. Verify mencatatnya sebagai peringatan, dan suite `theme`
+sebagai baseline (`scripts/e2e/contrastAllow.ts`) yang hanya boleh menyusut: pelanggaran gelap yang baru tetap gagal.
 
 ### Keamanan data pengguna
 
@@ -133,7 +206,7 @@ Semua kunci didefinisikan di `src/lib/storageKeys.ts`.
 | `<kunci>:karantina` | Salinan nilai yang tidak terbaca (lihat di atas) |
 | `simrs-quest:home-intro:v1` | Catatan sekali tampil di Beranda sudah dilihat |
 | `simrs-quest:quarantine-ack:v1` | Peringatan karantina terakhir yang sudah ditutup |
-| `simrs-quest:theme:v1` | Tema Beranda (`light` / `dark`) |
+| `simrs-quest:theme:v1` | Tema aplikasi (`light` / `dark`) untuk Beranda, halaman landing, dan layar jalur; tidak ada = ikut sistem |
 
 Awalan `simrs-sql-quest:` adalah nama produk lama dan sengaja dibiarkan: mengganti satu huruf saja berarti progres
 pengguna yang sudah ada "hilang".
@@ -331,6 +404,9 @@ Bagian ini menjelaskan isi **jalur SQL**.
   (termasuk relasi ke tabel sendiri pada `struktur_organisasi`).
 - **Progres tersimpan** di `localStorage` browser (lihat [Kunci localStorage](#kunci-localstorage)).
 - **Responsif**: dua kolom di layar lebar (± 40% / 60%), bertumpuk di ponsel.
+- **Tema terang & gelap** untuk seluruh jalur, termasuk editor dan penyorot SQL, tab Perbedaan, Explain, Lab Performa,
+  Progres, dan Ujian. Tombolnya ada di header (ikon matahari/bulan), dan pilihannya sama dengan tema Beranda; lihat
+  [Tema terang/gelap](#tema-teranggelap).
 
 ## Cara menjalankan
 
@@ -608,6 +684,19 @@ punya hint; Show Solution baru aktif setelah 3 percobaan.
   FAQ "gratis") ikut registri; **kata terlarang** juga dicari di teks yang dirender dari kurikulum (judul misi, konsep,
   deskripsi tier); semua tautan menuju rute yang dikenal router; meta & JSON-LD; pembaca progres hanya membaca; dan
   halaman/data jalur tidak terjangkau statis dari Beranda serta tidak menjangkau mesin SQL.
+- **Tema layar jalur** (`theme.ts`, `themePairs.ts`, `themeAllow.ts`; lihat [Tema terang/gelap](#tema-teranggelap)):
+  - setiap palet bertema terdefinisi di kedua blok `src/theme.css`, dan nilai gelapnya sama persis dengan Tailwind asli;
+  - konfigurasi palet dan varian `light:` di `tailwind.config.js` memakai selektor yang sama dengan blok terang;
+  - layar jalur tidak memakai palet tak bertema atau varian `dark:`; warna mati di className diberi peringatan;
+  - **kontras** setiap pasangan warna di kode dihitung di kedua tema: teks/latar, ikon, placeholder, dan garis fokus.
+    Pasangan diekstrak lewat AST TypeScript, termasuk cabang `?:`/`&&`, peta gaya, keadaan hover/focus/disabled, `light:`,
+    dan opacity. Tema terang wajib AA (4.5:1; teks besar, ikon, dan garis fokus 3:1); pengecualian beralasan dicatat di
+    `themeAllow.ts`, yang hanya boleh menyusut. Pelanggaran tema gelap hanya peringatan;
+  - skrip pra-gambar `index.html` dijalankan di sandbox untuk puluhan hash dan harus sama dengan `parseRoute`, termasuk
+    saat penyimpanan diblokir;
+  - batang scrollbar tema terang ≥ 3:1, dan teks terpilih (seleksi) tema terang tetap ≥ 4.5:1.
+
+  Tabel lengkapnya: `npx tsx scripts/verify/theme.ts --table [--fail] [--dark] [--file=Header]`.
 
 ### Uji E2E di browser
 
@@ -618,8 +707,8 @@ terpasang (lokasi lain: set `CHROME_PATH`). Server, browser, dan folder sementar
 
 | Suite | Yang diuji |
 |---|---|
-| `home` | Beranda & shell platform: Beranda bersih (satu h1, tanpa `.wasm`, tanpa gulir horizontal di 1400/390/320 px, tombol utama tidak mencuri fokus pengunjung baru sehingga Spasi tetap menggulir), masuk jalur lalu pulang dengan jalur tetap hangat (draf editor, Back/Forward), ringkasan pengguna lama (kartu "Hari ini" di lipatan pertama dengan pangkat, XP, dan bilah kemajuan; Enter melanjutkan) & catatan sekali tampil, peta jalur yang garis hijaunya berhenti di tier saat ini, latihan ulang jatuh tempo dan tautan masuk `#/sql/…`, ujian berjalan (jam mundur, kumpul otomatis di balik Beranda, "Waktu habis"), pengalihan rute tak dikenal (pemberitahuan terlihat walau halaman sedang digulir), karantina progres rusak sejak Beranda dibuka, pulihkan cadangan lewat pemilih file asli, tema terang/gelap (layar jalur tetap gelap), interaksi landing (tab, FAQ dengan keyboard, Hint & Run & Check pada peragaan, korsel, menu navbar, menu layar sempit), gerak (tombol jeda, gerak dikurangi saat halaman terbuka maupun sejak muat awal, halaman tidak meminta frame saat diam), posisi gulir yang pulih lewat tombol Kembali, keadaan semua misi tuntas, serta dua kegagalan unduhan (ringkasan progres, bagian bawah halaman + coba lagi) |
-| `courses` | Katalog & landing jalur: katalog (satu h1, kartu sesuai registri, chip "Segera" dengan mouse & keyboard, pencarian + jumlah hasil aria-live, keadaan kosong & pemulihannya, kartu → landing yang mulai dari atas dengan fokus di judulnya, Kembali memulihkan pencarian/hasil/posisi gulir, katalog lewat tautan baru mulai bersih), landing SQL (judul tab, meta & og, JSON-LD Course/BreadcrumbList/FAQPage yang valid, breadcrumb, angka 72/10/39/14.800 dari kurikulum, panggung hero yang mengetik misi lalu menampilkan "Jawaban benar!", "Lewati ke isi utama", satu tombol "Mulai" di tier 1, "Lihat silabus", tier 1 berisi misi & materi kurikulum dengan wilayah bernama judul tier, "Buka semua"/"Tutup semua", semua tautan dikenal router, CTA → `#/sql` dan baru di situ `.wasm` dimuat), peragaan "Jalankan query" (Lab Injection = "Serangan berhasil!" dengan kolom mode rentan/aman, Tebak Hasil = "Tebakanmu tepat!" tanpa menjalankan query), pengguna lama (centang "Selesai", pill kemajuan, status Boss, satu tombol "Lanjutkan" di tier misi berikutnya, tombol & kalimat CTA untuk yang sudah mulai, streak yang putus tanpa "0 hari", localStorage tidak berubah), varian "Segera" untuk keempat jalur (JSON-LD tanpa Course, langkah bertanda rencana, panggung kartu rencana), `#/js` → `#/landing/js` dengan Back/Forward yang tidak terjebak, 404 ramah (juga untuk alamat `%`-rusak), tautan Beranda (menu Jalur, pita berjalan — termasuk fokus keyboard yang tidak menggeser pita —, strip Jelajahi, peta jalur, footer, posisi gulir pulih), tema yang sama dengan Beranda (layar jalur tetap gelap), jalur hangat di balik landing (draf editor utuh, Tab tidak pernah masuk ke jalur tersembunyi, judul tab pulih), tanpa `.wasm` di halaman landing, tanpa gulir horizontal di 1440/375 px, kartu "Tanpa instalasi" tidak menutupi isi ponsel |
+| `home` | Beranda & shell platform: Beranda bersih (satu h1, tanpa `.wasm`, tanpa gulir horizontal di 1400/390/320 px, tombol utama tidak mencuri fokus pengunjung baru sehingga Spasi tetap menggulir), masuk jalur lalu pulang dengan jalur tetap hangat (draf editor, Back/Forward), ringkasan pengguna lama (kartu "Hari ini" di lipatan pertama dengan pangkat, XP, dan bilah kemajuan; Enter melanjutkan) & catatan sekali tampil, peta jalur yang garis hijaunya berhenti di tier saat ini, latihan ulang jatuh tempo dan tautan masuk `#/sql/…`, ujian berjalan (jam mundur, kumpul otomatis di balik Beranda, "Waktu habis"), pengalihan rute tak dikenal (pemberitahuan terlihat walau halaman sedang digulir), karantina progres rusak sejak Beranda dibuka, pulihkan cadangan lewat pemilih file asli, tema terang/gelap bersama (ikut sistem sebelum memilih, tersimpan, jalur ikut tema Beranda dan sebaliknya lewat tombol tema di header jalur, jalur hangat ikut tanpa muat ulang), interaksi landing (tab, FAQ dengan keyboard, Hint & Run & Check pada peragaan, korsel, menu navbar, menu layar sempit), gerak (tombol jeda, gerak dikurangi saat halaman terbuka maupun sejak muat awal, halaman tidak meminta frame saat diam), posisi gulir yang pulih lewat tombol Kembali, keadaan semua misi tuntas, serta dua kegagalan unduhan (ringkasan progres, bagian bawah halaman + coba lagi) |
+| `courses` | Katalog & landing jalur: katalog (satu h1, kartu sesuai registri, chip "Segera" dengan mouse & keyboard, pencarian + jumlah hasil aria-live, keadaan kosong & pemulihannya, kartu → landing yang mulai dari atas dengan fokus di judulnya, Kembali memulihkan pencarian/hasil/posisi gulir, katalog lewat tautan baru mulai bersih), landing SQL (judul tab, meta & og, JSON-LD Course/BreadcrumbList/FAQPage yang valid, breadcrumb, angka 72/10/39/14.800 dari kurikulum, panggung hero yang mengetik misi lalu menampilkan "Jawaban benar!", "Lewati ke isi utama", satu tombol "Mulai" di tier 1, "Lihat silabus", tier 1 berisi misi & materi kurikulum dengan wilayah bernama judul tier, "Buka semua"/"Tutup semua", semua tautan dikenal router, CTA → `#/sql` dan baru di situ `.wasm` dimuat), peragaan "Jalankan query" (Lab Injection = "Serangan berhasil!" dengan kolom mode rentan/aman, Tebak Hasil = "Tebakanmu tepat!" tanpa menjalankan query), pengguna lama (centang "Selesai", pill kemajuan, status Boss, satu tombol "Lanjutkan" di tier misi berikutnya, tombol & kalimat CTA untuk yang sudah mulai, streak yang putus tanpa "0 hari", localStorage tidak berubah), varian "Segera" untuk keempat jalur (JSON-LD tanpa Course, langkah bertanda rencana, panggung kartu rencana), `#/js` → `#/landing/js` dengan Back/Forward yang tidak terjebak, 404 ramah (juga untuk alamat `%`-rusak), tautan Beranda (menu Jalur, pita berjalan — termasuk fokus keyboard yang tidak menggeser pita —, strip Jelajahi, peta jalur, footer, posisi gulir pulih), tema yang sama dengan Beranda dan layar jalur (landing → jalur → Back, dua arah), jalur hangat di balik landing (draf editor utuh, Tab tidak pernah masuk ke jalur tersembunyi, judul tab pulih), tanpa `.wasm` di halaman landing, tanpa gulir horizontal di 1440/375 px, kartu "Tanpa instalasi" tidak menutupi isi ponsel |
 | `worker` | Penilaian lewat Web Worker, batas 100.000 baris, halaman tetap responsif saat query macet, batas waktu 8 detik, tombol Hentikan, worker dibuat ulang, Playground (salinan DB sesi, INSERT sungguhan, transaksi terbuka), Urutan Eksekusi pada query macet |
 | `boss` | Boss terkunci sampai semua misi tier selesai, tanpa hint, Show Solution terkunci 3 percobaan, tier berikutnya tetap terbuka, pesan di tab Materi, perayaan "Boss dikalahkan" dengan XP penuh |
 | `backup` | Ekspor mengunduh file berisi progres/kesalahan/materi, impor di browser kosong memulihkan semuanya, file yang salah ditolak tanpa mengubah progres |
@@ -629,26 +718,31 @@ terpasang (lokasi lain: set `CHROME_PATH`). Server, browser, dan folder sementar
 | `perflab` | Halaman responsif saat data besar disiapkan, percobaan 1a = SCAN, 1b = SEARCH dengan waktu membuat index terpisah dan lebih cepat dari SCAN, riwayat bertahan saat pindah target, database sesi tidak tersentuh, Reset data besar, tombol "Uji di data besar" dari misi sargable |
 | `tier10` | Tabel `satusehat_log` di Schema Explorer, jalur JSON tanpa `$` → pesan ramah + tautan materi JSON, jebakan `component[0]` ditolak, jawaban berbasis kode LOINC benar (+275 XP), Final Boss tier 10 di Peta Misi |
 | `ddl` | Misi CREATE TABLE di UI: chip penilaian, struktur salah ditampilkan berdampingan, uji perilaku yang gagal disebut nomornya, jawaban benar, "Konsep baru", Final Boss di tier 9, kategori "Desain tabel & DDL" di Peta Kelemahan |
+| `theme` | Mode terang/gelap jalur SQL: tombol tema di header (mouse, Enter/Spasi, label berganti, tersimpan; satu yang terlihat di 360–1440 px, tidak menimpa elemen lain, urutan fokus = urutan tampilan), pilihan berlaku dua arah dengan Beranda & landing, tab lain (event `storage`) dan tema sistem diikuti; `#/sql` dibuka langsung dengan sistem berlawanan: tema benar sejak frame pertama dan tanpa frame berlawanan (dicatat lewat `requestAnimationFrame`), termasuk layar muat saat `.wasm` ditahan; `#//sql` & `#///SQL/` tanpa penanda landing (palet terang aktif, tombol tema bekerja); pindah Beranda ↔ jalur ↔ landing tanpa kedipan, sementara landing tetap memakai variabel aslinya; tema gelap identik (121 variabel `--c-*` = `tailwindcss/colors`, warna elemen kunci = nilai asli); token penyorot SQL ≥ 4.5:1 di tema terang; kartu "Jawaban benar!" mint di tema terang; popup autocomplete & notifikasi lencana ikut tema (juga saat diganti selagi terbuka); **pemindai kontras** (`scripts/e2e/contrast.ts`) di 48 layar/keadaan × 2 tema × 1440/375 px: tema terang nol pelanggaran AA, tema gelap tanpa pelanggaran baru terhadap baseline lama (`scripts/e2e/contrastAllow.ts`, hanya boleh menyusut), tanpa permukaan besar yang berlawanan tema |
 
 Setiap suite juga gagal bila ada error JavaScript atau `console.error`/`warn` di halaman.
 
 ## Struktur folder
 
 ```
-├── index.html                    # termasuk skrip kecil pemasang tema Beranda sebelum gambar pertama
+├── index.html                    # termasuk skrip kecil pemasang tema aplikasi sebelum gambar pertama
 ├── scripts/
 │   ├── verify-missions.ts        # npm run verify (entry point)
 │   ├── verify/                   # report, curriculum, sqlMissions, labMissions, predictMissions, testCases,
 │   │                             # planTree, resultDiff, execSteps, sqlComplete, materi, weakness, worker, backup, exam,
-│   │                             # review, achievements, perfLab, fixtures, platform, landing, courses, memoryStorage
+│   │                             # review, achievements, perfLab, fixtures, platform, landing, courses, memoryStorage,
+│   │                             # theme (+ themePairs: ekstraktor pasangan warna, themeAllow: daftar izin)
 │   ├── fixtures/                 # fixture emas: storage-v1.json, backup-format1.json (JANGAN disunting)
 │   ├── test-cases/               # kasus uji per tier: tier1-3.ts, tier4.ts … tier10.ts, bosses.ts, index.ts, types.ts
-│   └── e2e/                      # npm run e2e: run (entry), server (Vite), browser (CDP), context & kit (helper), suites/
+│   └── e2e/                      # npm run e2e: run (entry), server (Vite), browser (CDP), context & kit (helper), suites/,
+│                                 # contrast (pemindai kontras di halaman) + contrastAllow (baseline gelap & pengecualian)
 └── src/
     ├── main.tsx                  # entry React → platform/PlatformShell
     ├── fonts.css / index.css     # font lokal (@fontsource) & gaya dasar layar jalur
+    ├── theme.css                 # palet layar jalur sebagai variabel: :root = gelap (Tailwind asli), blok terang
     ├── platform/                 # lapisan platform (ringan; tanpa data misi & mesin SQL)
     │   ├── router.ts             # router hash: parseRoute, formatRoute, navigate, useRoute
+    │   ├── theme.ts              # tema aplikasi (satu store): useTheme, useDocumentTheme, THEME_TOGGLE_LABEL
     │   ├── PlatformShell.tsx     # rute → layar; "satu jalur hangat"; pengalihan + pemberitahuan
     │   ├── tracks.ts             # registri jalur + kontrak TrackProps / TrackGlance / GlanceFn / GuardFn
     │   ├── Home.tsx              # Beranda: ringkasan, pemberitahuan, pulihkan cadangan, posisi gulir, bagian bawah malas

@@ -180,7 +180,8 @@ interface MissionNodeProps {
 
 const NODE_CIRCLE_CLASS: Record<NodeState, string> = {
   completed: 'border-emerald-400 bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/30',
-  active: 'border-teal-300 bg-teal-500/20 text-teal-200',
+  // Tema terang: teal-500/20 di atas baris aktif menjadi abu-biru kusam — mint pucat (tint 950) tetap menonjol.
+  active: 'border-teal-300 bg-teal-500/20 text-teal-200 light:bg-teal-950/50',
   unlocked: 'border-teal-500/60 bg-slate-900 text-teal-300',
   locked: 'border-slate-700 bg-slate-900 text-slate-600',
 };
@@ -223,7 +224,7 @@ function MissionNode({ mission, state, active, isLast, onSelect }: MissionNodePr
             >
               {mission.concept}
             </span>
-            <span className={`shrink-0 ${locked ? 'text-slate-600' : 'text-amber-400/80'}`}>{mission.xpReward} XP</span>
+            <span className={`shrink-0 ${locked ? 'text-slate-600' : 'text-amber-400/80 light:text-amber-400'}`}>{mission.xpReward} XP</span>
           </span>
         </span>
       </button>
@@ -231,7 +232,7 @@ function MissionNode({ mission, state, active, isLast, onSelect }: MissionNodePr
   );
 }
 
-const BOSS_CIRCLE_CLASS = 'border-yellow-300 bg-yellow-400/15 text-yellow-200 shadow-md shadow-yellow-400/20';
+const BOSS_CIRCLE_CLASS = 'border-yellow-300 bg-yellow-400/15 text-yellow-200 shadow-md shadow-yellow-400/20 light:border-yellow-700 light:bg-yellow-950/50 light:shadow-yellow-800/25';
 
 function NodeGlyph({ state, order, boss }: { state: NodeState; order: number; boss: boolean }) {
   if (state === 'completed') return boss ? <Crown className="h-4 w-4" strokeWidth={2.5} aria-label="Boss dikalahkan" /> : <Check className="h-4 w-4" strokeWidth={3} aria-label="Selesai" />;

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Hammer, Repeat } from 'lucide-react';
 import type { PlanNode } from '../../types';
-import { KIND_ICON, TONE_STYLE } from './planStyle';
+import { KIND_ICON, TONE_STYLE, accentClass } from './planStyle';
 
 export interface PlanTreeProps {
   nodes: readonly PlanNode[];
@@ -92,7 +92,7 @@ function PlanTreeNode({ node, onApplySuggestion, depth }: { node: PlanNode; onAp
   return (
     <li className="relative">
       <div className={`relative overflow-hidden rounded-lg border px-3 py-2 pl-4 ${style.card}`}>
-        <span className={`absolute inset-y-0 left-0 w-1 ${style.accent}`} aria-hidden="true" />
+        <span className={`absolute inset-y-0 left-0 w-1 ${accentClass(style)}`} aria-hidden="true" />
         <div className="flex flex-wrap items-center gap-2">
           <Icon className={`h-4 w-4 shrink-0 ${style.icon}`} aria-hidden="true" />
           <span className={`rounded border px-1.5 py-px text-[11px] font-semibold ${style.badge}`}>{node.title}</span>

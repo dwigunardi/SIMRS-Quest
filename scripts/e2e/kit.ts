@@ -1,6 +1,7 @@
 /**
  * Alat bantu bersama suite E2E yang memakai Beranda, halaman landing, dan shell platform (suites/home.ts,
- * suites/courses.ts): potongan ekspresi halaman (penanda siap, permintaan .wasm, latar gelap/terang) dan `kit(t)` —
+ * suites/courses.ts): potongan ekspresi halaman (penanda siap, permintaan .wasm, latar gelap/terang, tema layar jalur)
+ * dan `kit(t)` —
  * tunggu-kondisi, klik mouse/keyboard sungguhan lewat CDP, ukuran layar, jalur hangat yang tersembunyi.
  */
 import type { SuiteContext } from './context';
@@ -29,25 +30,40 @@ export const RESOURCE_BUFFER = 5000;
 export const WASM_REQUESTS = `performance.getEntriesByType('resource').map(e => new URL(e.name)).filter(u => u.pathname.endsWith('.wasm') && !/[?&]import\\b/.test(u.search)).map(u => u.pathname.split('/').pop())`;
 
 /**
- * Seberapa gelap layar yang sedang tampil, dihitung dari warna latar TERHITUNG (luminans relatif: 0 = hitam, 1 = putih):
- * `body` = latar <body>; `dark` = bagian titik contoh (kisi 8×6 di seluruh layar) yang latar padat terdekatnya gelap;
- * `brightest` = titik paling terang. Tombol berwarna boleh ada, tetapi permukaan layar jalur harus gelap.
+ * Seberapa gelap/terang layar yang sedang tampil, dihitung dari warna latar TERHITUNG (luminans relatif: 0 = hitam,
+ * 1 = putih): `body` = latar <body>; `dark` / `light` = bagian titik contoh (kisi 8×6 di seluruh layar) yang latar
+ * padat terdekatnya gelap (< 0.1) / terang (> 0.6); `brightest` / `darkest` = titik paling terang / paling gelap.
+ * Tombol berwarna boleh ada, tetapi permukaan layar harus mengikuti tema.
+ * Warna diambil setelah transisi CSS yang sedang berjalan selesai (paling lama 2 detik): sesaat setelah tema diganti,
+ * elemen berkelas `transition` masih berada di antara warna lama dan baru — saat mesin sibuk, lebih lama dari jeda tetap
+ * di suite. getAnimations() juga memaksa gaya dihitung, jadi transisi yang baru akan dimulai ikut terlihat.
  */
-export const BACKDROP = `(() => {
+export const BACKDROP = `(async () => {
+  const t0 = Date.now();
+  while (Date.now() - t0 < 2000 && document.getAnimations().some((a) => a instanceof CSSTransition && a.playState === 'running')) await new Promise((r) => setTimeout(r, 50));
   const parse = (color) => { const n = (color.match(/[\\d.]+/g) ?? []).map(Number); const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return { alpha: n.length > 3 ? n[3] : 1, lum: 0.2126 * f(n[0] ?? 0) + 0.7152 * f(n[1] ?? 0) + 0.0722 * f(n[2] ?? 0) }; };
   const solid = (el) => { for (let e = el; e; e = e.parentElement) { const c = parse(getComputedStyle(e).backgroundColor); if (c.alpha > 0.9) return c.lum; } return 1; };
   const lums = [];
   for (let ix = 0; ix < 8; ix += 1) for (let iy = 0; iy < 6; iy += 1) lums.push(solid(document.elementFromPoint(innerWidth * (ix + 0.5) / 8, innerHeight * (iy + 0.5) / 6)));
   const bodyColor = getComputedStyle(document.body).backgroundColor;
-  return { body: parse(bodyColor).lum, bodyColor, dark: lums.filter(l => l < 0.1).length / lums.length, brightest: Math.max(...lums) };
+  return { body: parse(bodyColor).lum, bodyColor, dark: lums.filter(l => l < 0.1).length / lums.length, light: lums.filter(l => l > 0.6).length / lums.length, brightest: Math.max(...lums), darkest: Math.min(...lums) };
 })()`;
 
 export interface Backdrop {
   body: number;
   bodyColor: string;
   dark: number;
+  light: number;
   brightest: number;
+  darkest: number;
 }
+
+/** Latar body layar jalur bertema gelap — nilai slate-950 Tailwind asli (tema gelap identik dengan sebelum ada tema terang). */
+export const TRACK_DARK_BODY = 'rgb(2, 6, 23)';
+/** Layar jalur gelap: latar body slate-950 asli, hampir semua permukaan gelap, tidak ada permukaan terang. */
+export const looksDarkTrack = (b: Backdrop) => b.bodyColor === TRACK_DARK_BODY && b.dark >= 0.85 && b.brightest < 0.75;
+/** Layar jalur terang: latar body terang dan hampir semua permukaan terang (tombol aksen berwarna tua boleh ada). */
+export const looksLightTrack = (b: Backdrop) => b.body > 0.9 && b.light >= 0.85;
 
 export interface KeySpec {
   key: string;

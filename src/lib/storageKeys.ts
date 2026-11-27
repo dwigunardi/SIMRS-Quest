@@ -67,8 +67,9 @@ export const HOME_INTRO_KEY = 'simrs-quest:home-intro:v1';
  */
 export const QUARANTINE_ACK_KEY = 'simrs-quest:quarantine-ack:v1';
 /**
- * Tema Beranda pilihan pengguna: 'light' | 'dark' (teks polos, bukan JSON). Tidak ada = mengikuti tema sistem.
- * Dibaca juga oleh skrip pra-gambar di index.html (ditulis sebagai literal di sana; scripts/verify/landing.ts
- * memeriksa keduanya sama).
+ * Tema aplikasi pilihan pengguna — SATU untuk Beranda, halaman katalog/landing jalur, dan layar jalur
+ * (src/platform/theme.ts): 'light' | 'dark' (teks polos, bukan JSON). Tidak ada = mengikuti tema sistem.
+ * Dibaca juga oleh skrip pra-gambar di index.html (ditulis sebagai literal di sana; scripts/verify/landing.ts dan
+ * scripts/verify/theme.ts memeriksa keduanya sama).
  */
 export const THEME_KEY = 'simrs-quest:theme:v1';

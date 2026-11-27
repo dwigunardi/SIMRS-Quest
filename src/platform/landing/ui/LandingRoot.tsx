@@ -20,8 +20,9 @@ export interface LandingRootProps {
 
 /**
  * Pembungkus SELURUH landing. Selama ter-mount ia:
- * - memasang data-q-landing + data-theme pada <html> (latar <body>, font, garis fokus, token warna) dan melepasnya
- *   saat di-unmount — jadi layar jalur kembali persis seperti semula;
+ * - memasang data-q-landing pada <html> (latar <body>, font, garis fokus; menahan palet terang layar jalur) dan
+ *   melepasnya saat di-unmount — jadi layar jalur kembali ke palet jalur. data-theme (tema bersama seluruh aplikasi,
+ *   src/platform/theme.ts) TETAP terpasang;
  * - membungkus isi dengan <MotionConfig reducedMotion="user"> (animasi transform mati bila pengguna memintanya);
  * - memasang data-q-motion="paused" pada <html> selama pengguna menekan "Jeda animasi" (mematikan animasi CSS
  *   berulang berkelas q-loop);

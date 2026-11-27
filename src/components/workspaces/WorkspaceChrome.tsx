@@ -3,9 +3,13 @@ import { MISSION_KIND_META, MissionKindBadge, displayKind } from '../MissionKind
 import { isBoss, solutionAttemptsLeft } from '../../lib/boss';
 import type { Mission, MissionProgress } from '../../types';
 
-/** Gaya tombol sekunder yang dipakai bersama oleh semua workspace misi. */
+/**
+ * Gaya tombol sekunder yang dipakai bersama oleh semua workspace misi (juga Lab Performa & Mode Ujian).
+ * Tema terang: disabled:opacity-40 di atas putih → ±2,3:1, padahal labelnya tetap informatif (mis. "Show Solution (3)"
+ * di boss, "Sebelumnya" di soal pertama) → gaya nonaktif khas tema terang: latar abu-abu + teks redup, tanpa opacity.
+ */
 export const SECONDARY_BUTTON =
-  'inline-flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-800 hover:text-slate-100 disabled:cursor-not-allowed disabled:opacity-40';
+  'inline-flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-800 hover:text-slate-100 disabled:cursor-not-allowed disabled:opacity-40 light:disabled:bg-slate-900 light:disabled:text-slate-500 light:disabled:opacity-100';
 
 export function WorkspaceHeader({ mission, totalCount }: { mission: Mission; totalCount: number }) {
   const kind = displayKind(mission);

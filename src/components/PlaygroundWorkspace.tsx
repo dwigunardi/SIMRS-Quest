@@ -25,6 +25,12 @@ const TABS: ReadonlyArray<{ id: PlaygroundTab; label: string; Icon: typeof Table
   { id: 'steps', label: 'Urutan Eksekusi', Icon: Footprints },
 ];
 
+/**
+ * Titik "usang" di tab. Tema terang: amber-400 menjadi coklat tua yang tenggelam di samping teks tab → pakai jingga
+ * cerah (amber-700, ≥ 3:1 terhadap latar) supaya tetap terbaca sebagai penanda perhatian.
+ */
+const STALE_DOT = 'h-1.5 w-1.5 rounded-full bg-amber-400 light:bg-amber-700';
+
 interface OutputTabsProps {
   active: PlaygroundTab;
   onChange: (tab: PlaygroundTab) => void;
@@ -53,10 +59,10 @@ function OutputTabs({ active, onChange, planStale, stepsStale }: OutputTabsProps
             <Icon className="h-4 w-4" aria-hidden />
             {label}
             {id === 'plan' && planStale ? (
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-400" aria-label="plan usang" title="Plan usang — klik Explain lagi" />
+              <span className={STALE_DOT} aria-label="plan usang" title="Plan usang — klik Explain lagi" />
             ) : null}
             {id === 'steps' && stepsStale ? (
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-400" aria-label="langkah usang" title="Query berubah — hitung ulang urutan eksekusi" />
+              <span className={STALE_DOT} aria-label="langkah usang" title="Query berubah — hitung ulang urutan eksekusi" />
             ) : null}
           </button>
         );
@@ -99,11 +105,13 @@ export function PlaygroundWorkspace({ playground, ready, isDirty, schema }: Play
           type="button"
           onClick={run}
           disabled={!ready || busy}
-          className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+          className="group inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50 light:disabled:bg-slate-800 light:disabled:text-slate-500 light:disabled:opacity-100 light:disabled:shadow-none"
         >
           <Play className="h-4 w-4 fill-current" aria-hidden />
           Run
-          <kbd className="hidden rounded bg-emerald-700/40 px-1.5 py-px font-mono text-[10px] font-medium text-emerald-50 sm:inline">
+          {/* Tema terang: tombol hijau tua → keycap lebih gelap dengan teks putih (sama dengan tombol Run & Check misi);
+              selagi tombol nonaktif (abu-abu) keycap ikut abu-abu terbaca. */}
+          <kbd className="hidden rounded bg-emerald-700/40 px-1.5 py-px font-mono text-[10px] font-medium text-emerald-50 light:bg-emerald-50/40 light:text-slate-950 light:group-disabled:bg-slate-900 light:group-disabled:text-slate-500 sm:inline">
             {RUN_SHORTCUT_LABEL}
           </kbd>
         </button>
@@ -112,11 +120,12 @@ export function PlaygroundWorkspace({ playground, ready, isDirty, schema }: Play
           onClick={explain}
           disabled={!ready || busy}
           title="Tampilkan query plan tanpa menjalankan query"
-          className="inline-flex items-center gap-2 rounded-lg border border-sky-500/40 bg-sky-500/10 px-3 py-2 text-sm font-semibold text-sky-200 transition hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-lg border border-sky-500/40 bg-sky-500/10 px-3 py-2 text-sm font-semibold text-sky-200 transition hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50 light:disabled:border-slate-700 light:disabled:bg-slate-900 light:disabled:text-slate-500 light:disabled:opacity-100"
         >
           <ListTree className="h-4 w-4" aria-hidden />
           Explain
-          <kbd className="hidden rounded bg-sky-900/50 px-1.5 py-px font-mono text-[10px] font-medium text-sky-100 lg:inline">
+          {/* Tema terang: sky-900 menjadi biru cerah yang mencolok → tint sedikit lebih pekat dari tombolnya. */}
+          <kbd className="hidden rounded bg-sky-900/50 px-1.5 py-px font-mono text-[10px] font-medium text-sky-100 light:bg-sky-500/15 lg:inline">
             {EXPLAIN_SHORTCUT_LABEL}
           </kbd>
         </button>
@@ -125,7 +134,7 @@ export function PlaygroundWorkspace({ playground, ready, isDirty, schema }: Play
           onClick={visualize}
           disabled={!ready || busy}
           title="Lihat urutan SQLite menjalankan SELECT: FROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY → LIMIT"
-          className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-200 transition hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-200 transition hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50 light:disabled:border-slate-700 light:disabled:bg-slate-900 light:disabled:text-slate-500 light:disabled:opacity-100"
         >
           <Footprints className="h-4 w-4" aria-hidden />
           Urutan Eksekusi
@@ -134,16 +143,18 @@ export function PlaygroundWorkspace({ playground, ready, isDirty, schema }: Play
           type="button"
           onClick={handleReset}
           disabled={!ready || busy}
-          className={`relative inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+          className={`relative inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 light:disabled:border-slate-700 light:disabled:bg-slate-900 light:disabled:text-slate-500 light:disabled:opacity-100 ${
             isDirty
-              ? 'animate-pulse border-amber-400 bg-amber-500/20 text-amber-200 ring-2 ring-amber-500/40 hover:animate-none'
+              ? // Tema terang: isian amber-500/20 + cincin amber-500 menjadi coklat keruh → tint kuning hangat, garis &
+                // cincin jingga (sama-sama "perlu perhatian", tanpa kesan kotor).
+                'animate-pulse border-amber-400 bg-amber-500/20 text-amber-200 ring-2 ring-amber-500/40 hover:animate-none light:border-amber-700 light:bg-amber-950/50 light:ring-amber-800/40'
               : 'border-amber-500/40 text-amber-300 hover:bg-amber-500/10'
           }`}
         >
           <DatabaseZap className="h-4 w-4" aria-hidden />
           Reset Database
           {isDirty && (
-            <span className="rounded-full bg-amber-400 px-1.5 py-px text-[10px] font-bold text-slate-950">Data berubah</span>
+            <span className="rounded-full bg-amber-400 px-1.5 py-px text-[10px] font-bold text-slate-950 light:bg-amber-600">Data berubah</span>
           )}
         </button>
       </div>
@@ -192,7 +203,7 @@ function StepsPanel({ playground, ready }: { playground: Playground; ready: bool
           type="button"
           onClick={playground.visualize}
           disabled={!ready}
-          className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-sm font-semibold text-emerald-200 hover:bg-emerald-500/20 disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-sm font-semibold text-emerald-200 hover:bg-emerald-500/20 disabled:opacity-50 light:disabled:border-slate-700 light:disabled:bg-slate-900 light:disabled:text-slate-500 light:disabled:opacity-100"
         >
           <Footprints className="h-4 w-4" aria-hidden />
           Visualisasikan query di editor

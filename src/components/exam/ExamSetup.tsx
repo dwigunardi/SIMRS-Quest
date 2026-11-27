@@ -12,6 +12,11 @@ export interface ExamSetupProps {
 const OPTION = 'rounded-lg border px-3 py-1.5 text-sm font-medium transition';
 const ON = 'border-emerald-500/60 bg-emerald-500/15 text-emerald-200';
 const OFF = 'border-slate-700 text-slate-300 hover:border-slate-500';
+/**
+ * Tier tanpa soal (terkunci) di tema terang: opacity-50 membuat teks di latar terang jauh di bawah AA, jadi diganti isian
+ * abu-abu + teks redup slate-500 (tetap terbaca; checkbox nonaktif & "0 soal" menandai tidak bisa dipilih).
+ */
+const LOCKED_LIGHT = 'light:bg-slate-900 light:opacity-100';
 
 /** Layar pengaturan ujian: pilih tier, jumlah soal, dan batas waktu. */
 export function ExamSetup({ progress, onStart }: ExamSetupProps): JSX.Element {
@@ -52,11 +57,11 @@ export function ExamSetup({ progress, onStart }: ExamSetupProps): JSX.Element {
               <label
                 key={t.tier}
                 className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition ${
-                  n === 0 ? 'cursor-not-allowed border-slate-800 opacity-50' : checked ? 'border-emerald-500/50 bg-emerald-500/10' : 'border-slate-700 hover:border-slate-500'
+                  n === 0 ? `cursor-not-allowed border-slate-800 opacity-50 ${LOCKED_LIGHT}` : checked ? 'border-emerald-500/50 bg-emerald-500/10' : 'border-slate-700 hover:border-slate-500'
                 }`}
               >
                 <input type="checkbox" className="accent-emerald-500" checked={checked} disabled={n === 0} onChange={() => toggle(t.tier)} />
-                <span className="min-w-0 flex-1 truncate text-slate-200">
+                <span className={`min-w-0 flex-1 truncate text-slate-200 ${n === 0 ? 'light:text-slate-500' : ''}`}>
                   Tier {t.tier}: {t.name}
                 </span>
                 <span className="shrink-0 text-xs tabular-nums text-slate-500">{n} soal</span>
@@ -102,7 +107,7 @@ export function ExamSetup({ progress, onStart }: ExamSetupProps): JSX.Element {
           type="button"
           onClick={start}
           disabled={pool === 0}
-          className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-slate-950 shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-slate-950 shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50 light:disabled:bg-slate-800 light:disabled:text-slate-500 light:disabled:opacity-100 light:disabled:shadow-none"
         >
           <Play className="h-4 w-4 fill-current" aria-hidden />
           Mulai ujian
@@ -121,7 +126,7 @@ export function ExamSetup({ progress, onStart }: ExamSetupProps): JSX.Element {
         </p>
       ) : null}
 
-      <p className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs leading-relaxed text-slate-300">
+      <p className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs leading-relaxed text-slate-300 light:border-amber-700/40 light:bg-amber-950/20">
         <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden />
         Ujian tidak memberi XP dan tidak mengubah status misi. Jawaban salah dicatat di Peta Kelemahan. Mode lain tetap bisa dibuka
         selama ujian — kejujuranmu yang membuat hasilnya bermakna. Waktu terus berjalan walau halaman di-refresh.

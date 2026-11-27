@@ -83,7 +83,7 @@ export function ExamSidebar({ exam }: ExamSidebarProps): JSX.Element {
           type="button"
           onClick={submit}
           disabled={exam.grading !== null}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:opacity-50"
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:opacity-50 light:disabled:bg-slate-800 light:disabled:text-slate-500 light:disabled:opacity-100 light:disabled:shadow-none"
         >
           <Send className="h-4 w-4" aria-hidden /> Kumpulkan jawaban
         </button>

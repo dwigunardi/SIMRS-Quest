@@ -75,7 +75,10 @@ export function ReferenceView({
                 disabled={access === 'locked'}
                 onClick={() => onOpenMission(mission.id)}
                 title={access === 'locked' ? 'Misi ini masih terkunci — selesaikan misi sebelumnya dulu' : undefined}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-950/60 px-2.5 py-1 text-xs text-slate-200 transition hover:border-emerald-500/50 disabled:cursor-not-allowed disabled:opacity-50"
+                // Tema terang: opacity-50 di atas putih memudarkan judul misi terkunci jauh di bawah AA (3,2:1) → gaya
+                // nonaktif khas tema terang (latar abu-abu + teks redup, tanpa opacity), sama dengan editor SQL nonaktif.
+                // Status "terkunci" tetap terbaca dari ikon gembok & kursor.
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-950/60 px-2.5 py-1 text-xs text-slate-200 transition hover:border-emerald-500/50 disabled:cursor-not-allowed disabled:opacity-50 light:disabled:bg-slate-900 light:disabled:text-slate-500 light:disabled:opacity-100"
               >
                 {access === 'done' ? <CircleCheck className="h-3.5 w-3.5 text-emerald-400" aria-label="selesai" /> : null}
                 {access === 'locked' ? <Lock className="h-3.5 w-3.5 text-slate-500" aria-label="terkunci" /> : null}

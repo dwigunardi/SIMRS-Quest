@@ -41,11 +41,23 @@ export function ClampedText({ text, lines, expanded, onExpandedChange, className
 
   useLayoutEffect(() => {
     measure();
+    // Font web yang selesai dimuat setelah pengukuran pertama mengubah panjang teks tanpa mengubah ukuran kotak yang
+    // terlipat (tingginya tetap `lines` baris) — ResizeObserver tidak terpicu, jadi "Selengkapnya" bisa muncul/hilang
+    // keliru tergantung kapan font tiba. Ukur ulang setiap kali font selesai dimuat.
+    const fonts = typeof document !== 'undefined' && 'fonts' in document ? document.fonts : null;
+    let alive = true;
+    fonts?.addEventListener('loadingdone', measure);
+    void fonts?.ready.then(() => {
+      if (alive) measure();
+    });
     const el = ref.current;
-    if (!el || typeof ResizeObserver === 'undefined') return undefined;
-    const observer = new ResizeObserver(measure);
-    observer.observe(el);
-    return () => observer.disconnect();
+    const observer = el && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+    if (el) observer?.observe(el);
+    return () => {
+      alive = false;
+      fonts?.removeEventListener('loadingdone', measure);
+      observer?.disconnect();
+    };
   }, [measure, text]);
 
   const clamped = !expanded;

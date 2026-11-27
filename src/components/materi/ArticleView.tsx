@@ -30,7 +30,7 @@ export const DIALECT_LABEL: Record<SqlDialect, string> = {
 const DIALECTS: readonly SqlDialect[] = ['sqlite', 'sqlServer', 'mysql', 'postgresql', 'oracle'];
 
 const ACTION_BUTTON =
-  'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-40';
+  'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 light:disabled:border-slate-700 light:disabled:bg-slate-900 light:disabled:text-slate-500 light:disabled:opacity-100';
 
 function ExampleBlock({ example, db, onOpenInPlayground, onVisualize }: { example: ArticleExample; db: Database | null } & ExampleActions) {
   const [outcome, setOutcome] = useState<ExecOutcome | null>(null);
