@@ -18,12 +18,17 @@ export interface CompletionPopupProps {
   onAccept: (item: CompletionItem) => void;
 }
 
+/**
+ * Tema terang: tint 500/15 nyaris hilang di atas baris aktif (hijau muda) sehingga huruf badge turun di bawah AA —
+ * pakai tint pucat 950. /45 = pastel yang masih bisa dibedakan tanpa mengalahkan label saran (/80 tampil sebagai chip
+ * neon); huruf 300 di atasnya ≥ 5.8:1, juga di baris aktif.
+ */
 const KIND_BADGE: Record<CompletionKind, { text: string; className: string; label: string }> = {
-  column: { text: 'C', className: 'bg-sky-500/15 text-sky-300', label: 'kolom' },
-  table: { text: 'T', className: 'bg-fuchsia-500/15 text-fuchsia-300', label: 'tabel' },
-  alias: { text: 'A', className: 'bg-amber-500/15 text-amber-300', label: 'alias' },
-  function: { text: 'ƒ', className: 'bg-teal-500/15 text-teal-300', label: 'fungsi' },
-  keyword: { text: 'K', className: 'bg-emerald-500/15 text-emerald-300', label: 'keyword' },
+  column: { text: 'C', className: 'bg-sky-500/15 text-sky-300 light:bg-sky-950/45', label: 'kolom' },
+  table: { text: 'T', className: 'bg-fuchsia-500/15 text-fuchsia-300 light:bg-fuchsia-950/45', label: 'tabel' },
+  alias: { text: 'A', className: 'bg-amber-500/15 text-amber-300 light:bg-amber-950/45', label: 'alias' },
+  function: { text: 'ƒ', className: 'bg-teal-500/15 text-teal-300 light:bg-teal-950/45', label: 'fungsi' },
+  keyword: { text: 'K', className: 'bg-emerald-500/15 text-emerald-300 light:bg-emerald-950/45', label: 'keyword' },
 };
 
 const WIDTH = 304;
@@ -42,7 +47,7 @@ function MatchedLabel({ label, prefix }: { label: string; prefix: string }): JSX
   return (
     <>
       {label.slice(0, at)}
-      <span className="font-semibold text-white">{label.slice(at, at + prefix.length)}</span>
+      <span className="font-semibold text-white light:text-slate-50">{label.slice(at, at + prefix.length)}</span>
       {label.slice(at + prefix.length)}
     </>
   );
@@ -69,7 +74,8 @@ export function CompletionPopup({ id, result, selected, anchor, onSelect, onAcce
     <div
       // Klik/seret di popup (scrollbar, footer) tidak boleh mencuri fokus dari editor — blur menutup popup.
       onMouseDown={(event) => event.preventDefault()}
-      className="fixed z-50 overflow-hidden rounded-lg border border-slate-700 bg-slate-900/95 shadow-2xl shadow-black/50 backdrop-blur"
+      // Tema terang: popup = permukaan putih yang terangkat (bayangan lembut), bukan abu-abu panel.
+      className="fixed z-50 overflow-hidden rounded-lg border border-slate-700 bg-slate-900/95 shadow-2xl shadow-black/50 backdrop-blur light:bg-slate-950 light:shadow-slate-500/25"
       style={{ top, left, width: WIDTH }}
     >
       <ul
@@ -98,7 +104,8 @@ export function CompletionPopup({ id, result, selected, anchor, onSelect, onAcce
                 if (!active) onSelect(index);
               }}
               className={`flex cursor-pointer items-center gap-2 px-2 font-mono text-[12.5px] ${
-                active ? 'bg-emerald-500/20 text-slate-50' : 'text-slate-300'
+                // Tema terang: baris aktif mint pucat (bukan hijau tua /20 yang menjadi abu-sage di atas putih).
+                active ? 'bg-emerald-500/20 text-slate-50 light:bg-emerald-950/40' : 'text-slate-300'
               }`}
               style={{ height: ROW_HEIGHT }}
             >
@@ -118,7 +125,7 @@ export function CompletionPopup({ id, result, selected, anchor, onSelect, onAcce
         })}
       </ul>
       <div
-        className="flex items-center gap-2 border-t border-slate-800 bg-slate-950/60 px-2 text-[10.5px] text-slate-500"
+        className="flex items-center gap-2 border-t border-slate-800 bg-slate-950/60 px-2 text-[10.5px] text-slate-500 light:bg-slate-900"
         style={{ height: FOOTER_HEIGHT }}
       >
         <span>

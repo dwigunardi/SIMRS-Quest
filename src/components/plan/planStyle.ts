@@ -21,7 +21,18 @@ export interface ToneStyle {
   icon: string;
   /** Garis aksen kiri. */
   accent: string;
+  /**
+   * Timpaan garis aksen khusus tema terang (satu kelas `light:`), bila warna aksen dasarnya keruh di atas latar terang.
+   * Sengaja field terpisah: kelas `light:` di string `accent` membuat ekstraktor pasangan warna (scripts/verify/
+   * themePairs.ts) menganggap objek ini wadah teks berlatar dua kelas.
+   */
+  accentLight?: string;
   label: string;
+}
+
+/** Kelas garis aksen nada (dasar + timpaan tema terang). */
+export function accentClass(style: ToneStyle): string {
+  return style.accentLight ? `${style.accent} ${style.accentLight}` : style.accent;
 }
 
 export const TONE_STYLE: Record<PlanTone, ToneStyle> = {
@@ -34,9 +45,11 @@ export const TONE_STYLE: Record<PlanTone, ToneStyle> = {
   },
   warn: {
     card: 'border-amber-500/30 bg-amber-950/15',
-    badge: 'border-amber-500/40 bg-amber-500/10 text-amber-200',
+    badge: 'border-amber-500/40 bg-amber-500/10 text-amber-200 light:border-amber-700/40 light:bg-amber-950/40',
     icon: 'text-amber-400',
     accent: 'bg-amber-500',
+    // amber-500 di tema terang = coklat #9A450D; amber-700 = jingga-emas #C66508 (titik legenda 3.98:1 di putih).
+    accentLight: 'light:bg-amber-700',
     label: 'Ada biaya tambahan',
   },
   bad: {

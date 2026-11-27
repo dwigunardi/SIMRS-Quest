@@ -167,7 +167,7 @@ function TableDetail({ table, db, dbVersion }: TableDetailProps) {
                 <td className="py-1.5">
                   <span className="flex flex-wrap gap-1">
                     {column.isPrimaryKey && (
-                      <Badge className="border-amber-500/40 bg-amber-500/10 text-amber-300">
+                      <Badge className="border-amber-500/40 bg-amber-500/10 text-amber-300 light:border-amber-700/40 light:bg-amber-950/40">
                         <KeyRound className="h-3 w-3" aria-hidden />
                         PK
                       </Badge>
@@ -270,7 +270,7 @@ function IndexSection({ indexes }: { indexes: IndexInfo[] }) {
               <Zap className="h-3 w-3 shrink-0 text-sky-400" aria-hidden />
               <span className="font-mono text-slate-200">{index.name}</span>
               <span className="font-mono text-slate-400">({index.columns.join(', ')})</span>
-              {index.unique && <Badge className="border-amber-500/40 bg-amber-500/10 text-amber-300">UNIQUE</Badge>}
+              {index.unique && <Badge className="border-amber-500/40 bg-amber-500/10 text-amber-300 light:border-amber-700/40 light:bg-amber-950/40">UNIQUE</Badge>}
               <span
                 className={`ml-auto rounded px-1.5 py-px text-[10px] ${
                   index.origin === 'c' ? 'bg-sky-500/15 text-sky-300' : 'bg-slate-800 text-slate-400'

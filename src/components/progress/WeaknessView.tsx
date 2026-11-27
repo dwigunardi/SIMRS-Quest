@@ -24,7 +24,7 @@ function Bar({ value, max, label }: { value: number; max: number; label: string 
   const width = max > 0 ? Math.max(4, Math.round((value / max) * 100)) : 0;
   return (
     <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800/80" title={label} aria-hidden>
-      <div className="h-full rounded-full bg-amber-400/80" style={{ width: `${width}%` }} />
+      <div className="h-full rounded-full bg-amber-400/80 light:bg-amber-700" style={{ width: `${width}%` }} />
     </div>
   );
 }
@@ -56,7 +56,7 @@ function RecommendationCard({ rec, missionAccess, onOpenMission, onOpenArticle }
       type="button"
       disabled={access === 'locked'}
       onClick={() => onOpenMission(rec.missionId)}
-      className="flex w-full items-start gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] p-3 text-left transition hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+      className="flex w-full items-start gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] p-3 text-left transition hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-50 light:disabled:border-slate-700 light:disabled:bg-slate-900 light:disabled:opacity-100"
     >
       <RotateCcw className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" aria-hidden />
       <span className="min-w-0">
@@ -98,7 +98,7 @@ function CategoryRow({ category, max, missionAccess, onOpenMission, onOpenArticl
                   type="button"
                   disabled={access === 'locked'}
                   onClick={() => onOpenMission(m.missionId)}
-                  className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-0.5 text-slate-300 hover:border-emerald-500/50 disabled:opacity-50"
+                  className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-0.5 text-slate-300 hover:border-emerald-500/50 disabled:opacity-50 light:disabled:border-slate-700 light:disabled:bg-slate-900 light:disabled:text-slate-500 light:disabled:opacity-100"
                   title={m.resolved ? 'Sudah diselesaikan setelah kesalahan terakhir' : 'Belum terselesaikan'}
                 >
                   {m.resolved ? <CircleCheck className="h-3 w-3 text-emerald-400" aria-label="teratasi" /> : null}

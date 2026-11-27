@@ -14,6 +14,13 @@ export interface ExecutionStepsViewProps {
   onRefresh?: () => void;
 }
 
+/**
+ * Tombol Sebelumnya/Berikutnya. Tema terang: disabled:opacity-40 di atas putih → ±2,3:1 → gaya nonaktif khas tema terang
+ * (latar abu-abu + teks redup, tanpa opacity), sama dengan SECONDARY_BUTTON.
+ */
+const STEP_NAV_BUTTON =
+  'inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-xs font-medium text-slate-300 hover:bg-slate-800 disabled:opacity-40 light:disabled:bg-slate-900 light:disabled:text-slate-500 light:disabled:opacity-100';
+
 /** Kata kunci pembuka klausa (sudah ditampilkan terpisah sebagai label berwarna). */
 const LEADING_KEYWORD = /^\s*(?:WITH(?:\s+RECURSIVE)?|SELECT(?:\s+DISTINCT)?|FROM|WHERE|GROUP\s+BY|HAVING|ORDER\s+BY|LIMIT)\b/i;
 
@@ -167,7 +174,7 @@ export function ExecutionStepsView({ plan, stale = false, onRefresh }: Execution
           <button
             type="button"
             onClick={onRefresh}
-            className="inline-flex items-center gap-1.5 rounded-md border border-amber-500/50 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-200 hover:bg-amber-500/20"
+            className="inline-flex items-center gap-1.5 rounded-md border border-amber-500/50 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-200 hover:bg-amber-500/20 light:border-amber-700/50 light:bg-amber-950/40 light:hover:bg-amber-950/70"
           >
             <RefreshCw className="h-3.5 w-3.5" aria-hidden />
             Query berubah — hitung ulang
@@ -230,7 +237,7 @@ export function ExecutionStepsView({ plan, stale = false, onRefresh }: Execution
               type="button"
               onClick={() => go(active - 1)}
               disabled={active === 0}
-              className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-xs font-medium text-slate-300 hover:bg-slate-800 disabled:opacity-40"
+              className={STEP_NAV_BUTTON}
             >
               <ChevronLeft className="h-3.5 w-3.5" aria-hidden />
               Sebelumnya
@@ -242,7 +249,7 @@ export function ExecutionStepsView({ plan, stale = false, onRefresh }: Execution
               type="button"
               onClick={() => go(active + 1)}
               disabled={active >= steps.length - 1}
-              className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-xs font-medium text-slate-300 hover:bg-slate-800 disabled:opacity-40"
+              className={STEP_NAV_BUTTON}
             >
               Berikutnya
               <ChevronRight className="h-3.5 w-3.5" aria-hidden />

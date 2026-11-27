@@ -57,13 +57,15 @@ export function ReferenceSidebar({ activeId, onSelect, read }: ReferenceSidebarP
 
       <div className="relative">
         <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" aria-hidden />
+        {/* Tema terang: batas slate-700 terlalu pucat di atas putih (< 3:1) dan cincin fokus /30 nyaris hilang → batas &
+            cincin lebih pekat (sama dengan editor SQL & input portal injection). */}
         <input
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Cari: LEFT JOIN, NULL, TOP, ROLLBACK…"
           aria-label="Cari materi"
-          className="w-full rounded-lg border border-slate-700 bg-slate-950 py-2 pl-8 pr-8 text-sm text-slate-100 placeholder:text-slate-600 focus:border-emerald-500/60 focus:outline-none focus:ring-1 focus:ring-emerald-500/30"
+          className="w-full rounded-lg border border-slate-700 bg-slate-950 py-2 pl-8 pr-8 text-sm text-slate-100 placeholder:text-slate-600 focus:border-emerald-500/60 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 light:border-slate-600/80 light:focus:border-emerald-500/80 light:focus:ring-emerald-500"
         />
         {query ? (
           <button

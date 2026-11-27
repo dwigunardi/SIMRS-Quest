@@ -17,7 +17,7 @@ const HIDE_SAME_THRESHOLD = 8;
 
 const ROW_STYLE: Record<DiffRowStatus, { row: string; marker: string; label: string; Icon: typeof Check }> = {
   same: { row: 'text-slate-500', marker: 'text-slate-600', label: 'sama', Icon: Check },
-  changed: { row: 'bg-amber-500/10 text-slate-200', marker: 'text-amber-300', label: 'nilai berbeda', Icon: X },
+  changed: { row: 'bg-amber-500/10 text-slate-200 light:bg-amber-950/25', marker: 'text-amber-300', label: 'nilai berbeda', Icon: X },
   moved: { row: 'bg-violet-500/10 text-slate-200', marker: 'text-violet-300', label: 'urutan salah', Icon: ArrowUpDown },
   extra: { row: 'bg-sky-500/10 text-slate-200', marker: 'text-sky-300', label: 'berlebih', Icon: Plus },
   missing: { row: 'bg-rose-500/10 text-slate-300', marker: 'text-rose-300', label: 'kurang', Icon: Minus },
@@ -25,7 +25,7 @@ const ROW_STYLE: Record<DiffRowStatus, { row: string; marker: string; label: str
 
 const CHIP_STYLE: Record<DiffRowStatus, string> = {
   same: 'border-slate-700 bg-slate-800/60 text-slate-300',
-  changed: 'border-amber-500/40 bg-amber-500/10 text-amber-200',
+  changed: 'border-amber-500/40 bg-amber-500/10 text-amber-200 light:border-amber-700/40 light:bg-amber-950/40',
   moved: 'border-violet-500/40 bg-violet-500/10 text-violet-200',
   extra: 'border-sky-500/40 bg-sky-500/10 text-sky-200',
   missing: 'border-rose-500/40 bg-rose-500/10 text-rose-200',
@@ -86,12 +86,12 @@ const HEADER_STYLE: Record<DiffColumn['status'], string> = {
 
 function HeaderCell({ column }: { column: DiffColumn }): JSX.Element {
   let sub: ReactNode = null;
-  if (column.status === 'renamed') sub = <span className="block text-[10px] font-normal text-amber-400/80">kamu: {column.actualName}</span>;
+  if (column.status === 'renamed') sub = <span className="block text-[10px] font-normal text-amber-400/80 light:text-amber-400">kamu: {column.actualName}</span>;
   if (column.status === 'reordered') {
-    sub = <span className="block text-[10px] font-normal text-violet-400/80">kamu: kolom ke-{(column.actualIndex ?? 0) + 1}</span>;
+    sub = <span className="block text-[10px] font-normal text-violet-400/80 light:text-violet-400">kamu: kolom ke-{(column.actualIndex ?? 0) + 1}</span>;
   }
-  if (column.status === 'extra') sub = <span className="block text-[10px] font-normal text-sky-400/80">berlebih</span>;
-  if (column.status === 'missing') sub = <span className="block text-[10px] font-normal text-rose-400/80">tidak ada</span>;
+  if (column.status === 'extra') sub = <span className="block text-[10px] font-normal text-sky-400/80 light:text-sky-400">berlebih</span>;
+  if (column.status === 'missing') sub = <span className="block text-[10px] font-normal text-rose-400/80 light:text-rose-400">tidak ada</span>;
   return (
     <th scope="col" className={`sticky top-0 z-10 whitespace-nowrap border-b border-slate-800 bg-slate-900 px-3 py-2 font-semibold ${HEADER_STYLE[column.status]}`}>
       {column.name}
@@ -104,12 +104,12 @@ function ValueCell({ row, index, column }: { row: DiffRow; index: number; column
   const value = row.cells[index];
   const absent = value === undefined && (column.status === 'missing' || (row.status === 'missing' && column.status === 'extra'));
   if (absent) {
-    return <td className="whitespace-nowrap border-b border-slate-800/70 px-3 py-1.5 text-slate-700">—</td>;
+    return <td className="whitespace-nowrap border-b border-slate-800/70 px-3 py-1.5 text-slate-700 light:text-slate-500">—</td>;
   }
   if (row.changedColumns.includes(index)) {
     const expectedValue: CellValue | undefined = row.expectedCells[index];
     return (
-      <td className="whitespace-nowrap border-b border-slate-800/70 bg-amber-500/15 px-3 py-1.5">
+      <td className="whitespace-nowrap border-b border-slate-800/70 bg-amber-500/15 px-3 py-1.5 light:bg-amber-950/50">
         <span className="inline-flex items-center gap-1.5">
           <span className="text-rose-300 line-through decoration-rose-400/70">
             <CellContent value={value} />
@@ -140,7 +140,7 @@ function MarkerCell({ row }: { row: DiffRow }): JSX.Element {
         <Icon className="h-3 w-3" aria-hidden="true" />
         <span className="tabular-nums">{position}</span>
         <span className="sr-only">{style.label}</span>
-        {movedHint ? <span className="text-[10px] text-violet-300/80">{movedHint.replace(' · ', '')}</span> : null}
+        {movedHint ? <span className="text-[10px] text-violet-300/80 light:text-violet-300">{movedHint.replace(' · ', '')}</span> : null}
       </span>
     </td>
   );

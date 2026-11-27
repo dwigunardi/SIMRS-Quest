@@ -716,11 +716,11 @@ function verifyLight(ok: Check): void {
   }
   const html = readSource('index.html');
   ok(!/fonts\.(googleapis|gstatic)\.com/.test(html), 'index.html: font harus dari paket @fontsource, bukan Google Fonts');
-  ok(/<html[^>]*class="dark"/.test(html), 'index.html: kelas "dark" pada <html> harus tetap ada (dipakai layar jalur)');
+  ok(/<html[^>]*class="dark"/.test(html), 'index.html: kelas "dark" pada <html> dibiarkan apa adanya (tidak dipakai; varian dark: tidak dipakai)');
   // Skrip pra-gambar di index.html membaca kunci tema yang sama dengan useTheme (kalau berbeda, latar berkedip saat dibuka).
   ok(THEME_STORAGE_KEY === THEME_KEY && THEME_KEY.startsWith('simrs-quest:'), 'kunci tema harus THEME_KEY dari src/lib/storageKeys.ts (keluarga simrs-quest:*)');
   ok(html.includes(`localStorage.getItem('${THEME_KEY}')`), 'index.html: skrip tema harus membaca kunci THEME_KEY (src/lib/storageKeys.ts)');
-  ok(/<html(?![^>]*data-theme)[^>]*>/.test(html), 'index.html: data-theme tidak boleh ditulis mati pada <html> (dipasang skrip/LandingRoot hanya di Beranda)');
+  ok(/<html(?![^>]*data-theme)[^>]*>/.test(html), 'index.html: data-theme tidak boleh ditulis mati pada <html> (dipasang skrip pra-gambar & src/platform/theme.ts)');
 }
 
 /* ------------------------------------------------------------------ */

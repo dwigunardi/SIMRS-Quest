@@ -37,6 +37,7 @@ import { Home } from './Home';
 import { PageErrorBoundary, PageLoading } from './landing/layout/PageFallback';
 import { HOME_ROUTE, RESERVED_SEGMENTS, formatRoute, isLandingRoute, navigate, useRoute, type CourseRoute, type LandingRoute, type Route } from './router';
 import { PlatformError, PlatformLoading } from './screens';
+import { useDocumentTheme } from './theme';
 import { getTrack, type TrackManifest, type TrackProps } from './tracks';
 
 type TrackLoader = NonNullable<TrackManifest['load']>;
@@ -119,7 +120,21 @@ function goHome(): void {
  * "tidak berubah" dan layar tidak berpindah.
  */
 export function PlatformShell(): JSX.Element {
-  return <ShellScreens route={useRoute()} />;
+  return (
+    <>
+      <DocumentTheme />
+      <ShellScreens route={useRoute()} />
+    </>
+  );
+}
+
+/**
+ * Menjaga html[data-theme] untuk seluruh aplikasi (src/platform/theme.ts). Komponen tersendiri supaya mengganti tema
+ * tidak merender ulang shell; palet berganti lewat variabel CSS, bukan lewat React.
+ */
+function DocumentTheme(): null {
+  useDocumentTheme();
+  return null;
 }
 
 /** Jalur di registri yang belum tersedia → rute landing-nya (pengalihan); selain itu null. */
@@ -184,6 +199,13 @@ function ShellScreens({ route }: { route: Route }): JSX.Element {
   useEffect(() => {
     if (shellTitle !== null) document.title = shellTitle;
   }, [shellTitle]);
+
+  // Jaring pengaman: penanda landing tidak boleh tertinggal selama layar jalur tampil — palet terang jalur hanya aktif
+  // pada html:not([data-q-landing]). Normalnya penanda itu tidak pernah ada di sini (skrip pra-gambar index.html
+  // memakai aturan rute yang sama dengan parseRoute, dan LandingRoot melepasnya saat di-unmount).
+  useLayoutEffect(() => {
+    if (track) document.documentElement.removeAttribute('data-q-landing');
+  }, [track]);
 
   const dismissNotice = useCallback(() => setNotice(null), []);
 

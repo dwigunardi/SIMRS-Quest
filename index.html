@@ -6,21 +6,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SIMRS Quest</title>
     <script>
-      // Beranda punya tema terang/gelap sendiri (src/platform/landing/hooks/useTheme.ts). Penandanya dipasang di sini,
-      // sebelum gambar pertama, supaya latar tidak berkedip gelap lalu terang saat halaman dibuka. Hanya untuk rute
-      // Beranda dan halaman katalog/landing jalur ('#/landing…'): layar jalur selalu gelap, dan LandingRoot melepas
-      // kedua atribut ini begitu halaman landing ditinggalkan.
+      // Tema terang/gelap berlaku untuk SELURUH aplikasi (src/platform/theme.ts). Penandanya dipasang di sini, sebelum
+      // gambar pertama, supaya latar tidak berkedip saat halaman dibuka — termasuk saat '#/sql' dibuka langsung:
+      // - data-theme di <html> untuk semua rute (layar jalur: palet src/theme.css; Beranda & landing: token q-*);
+      // - data-q-landing HANYA untuk rute Beranda dan halaman katalog/landing jalur ('#/landing…'). LandingRoot
+      //   melepasnya saat halaman landing ditinggalkan; data-theme tetap.
+      // Aturan rutenya SAMA dengan parseRoute (src/platform/router.ts): layar jalur = segmen pertama hash yang tidak
+      // kosong ('#//sql' = '#/sql'), ter-decode, huruf kecil, bukan 'landing' dan bukan segmen cadangan
+      // (RESERVED_SEGMENTS). scripts/verify/theme.ts menjalankan skrip ini untuk banyak hash dan membandingkannya.
       (function () {
+        var root = document.documentElement;
+        var theme = null;
         try {
-          if (/^#\/[^/]/.test(location.hash) && !/^#\/+landing(\/|$)/i.test(location.hash)) return;
-          var theme = localStorage.getItem('simrs-quest:theme:v1');
-          if (theme !== 'light' && theme !== 'dark') theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-          var root = document.documentElement;
-          root.setAttribute('data-q-landing', '');
-          root.setAttribute('data-theme', theme);
+          theme = localStorage.getItem('simrs-quest:theme:v1');
         } catch (error) {
-          /* penyimpanan diblokir: tema dipasang React setelah dimuat */
+          /* penyimpanan diblokir: ikut tema sistem */
         }
+        if (theme !== 'light' && theme !== 'dark') {
+          theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        root.setAttribute('data-theme', theme);
+        var hash = location.hash;
+        var first = null;
+        if (hash.indexOf('#/') === 0) {
+          var parts = hash.slice(2).split('/');
+          for (var i = 0; i < parts.length && first === null; i++) if (parts[i] !== '') first = parts[i];
+        }
+        if (first !== null) {
+          try {
+            first = decodeURIComponent(first).toLowerCase();
+          } catch (error) {
+            first = null; // segmen rusak → Beranda
+          }
+        }
+        if (first !== null && ['landing', 'profil', 'cari', 'pengaturan', 'runner'].indexOf(first) < 0) return;
+        root.setAttribute('data-q-landing', '');
       })();
     </script>
   </head>

@@ -103,7 +103,7 @@ function QuestionCard({ groupName, number, question, selected, status, solutionV
           return (
             <label
               key={optionIndex}
-              className={`flex cursor-pointer items-start gap-2.5 rounded-md border px-3 py-2 text-sm transition focus-within:ring-1 focus-within:ring-sky-400/60 ${
+              className={`flex cursor-pointer items-start gap-2.5 rounded-md border px-3 py-2 text-sm transition focus-within:ring-1 focus-within:ring-sky-400/60 light:focus-within:ring-sky-400 ${
                 isKey
                   ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-100'
                   : checked

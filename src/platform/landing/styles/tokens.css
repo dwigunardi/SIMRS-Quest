@@ -1,6 +1,7 @@
 /*
- * Token warna landing (Beranda). Dipilih lewat atribut data-theme pada <html> — dipasang oleh LandingRoot dan
- * dilepas lagi saat Beranda tidak tampil, jadi layar jalur (tema gelap slate/emerald) tidak tersentuh.
+ * Token warna landing (Beranda). Dipilih lewat atribut data-theme pada <html> — tema bersama seluruh aplikasi
+ * (src/platform/theme.ts), terpasang di semua rute. Token q-* hanya dipakai komponen landing; layar jalur memakai palet
+ * Tailwind berbasis variabel di src/theme.css (palet terangnya dibatasi ke halaman tanpa data-q-landing).
  *
  * Nilai ditulis sebagai kanal "R G B" supaya Tailwind bisa menambahkan alpha: bg-q-primary/20, text-q-ink/70, …
  * (lihat perluasan `q` di tailwind.config.js). Kontras tiap pasangan teks/latar diperiksa scripts/verify/landing.ts
@@ -118,7 +119,7 @@ html[data-theme='dark'] {
   --q-shadow-pop: 0 0 0 1px rgb(148 163 184 / 14%), 0 12px 32px -12px rgb(0 0 0 / 80%);
 }
 
-/* Jendela kode & mockup layar jalur: SAMA di kedua tema (layar jalur memang selalu gelap). */
+/* Jendela kode & mockup layar jalur di landing: SAMA di kedua tema (ilustrasi sengaja selalu gelap). */
 html[data-theme] {
   --q-code-bg: 15 23 42; /* #0F172A */
   --q-code-deep: 2 6 23; /* #020617 latar halaman aplikasi */

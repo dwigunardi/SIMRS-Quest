@@ -9,8 +9,8 @@
  * Posisi gulir: datang lewat navigasi biasa (tombol Beranda, tautan, pengalihan) → mulai dari atas; datang lewat
  * tombol Kembali/Maju browser → kembali ke posisi terakhir di halaman ini (disimpan di history.state entri Beranda).
  *
- * Tema terang/gelap hanya milik Beranda: LandingRoot memasang data-theme pada <html> selama Beranda tampil dan
- * melepasnya saat di-unmount, jadi layar jalur selalu gelap seperti biasa.
+ * Tema terang/gelap berlaku untuk seluruh aplikasi (src/platform/theme.ts): pilihan di Beranda juga berlaku di layar
+ * jalur dan sebaliknya. LandingRoot hanya menambahkan penanda data-q-landing selama Beranda tampil.
  *
  * Penanda untuk uji E2E: [data-testid="home"] dengan data-ready="true" setelah ringkasan siap.
  */

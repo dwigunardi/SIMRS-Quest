@@ -67,11 +67,12 @@ export function PerfLab({ lab, schema }: PerfLabProps): JSX.Element {
           type="button"
           onClick={lab.run}
           disabled={running}
-          className="inline-flex items-center gap-2 rounded-lg bg-cyan-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-cyan-500/20 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-lg bg-cyan-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-cyan-500/20 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50 light:disabled:bg-slate-800 light:disabled:text-slate-500 light:disabled:opacity-100 light:disabled:shadow-none"
         >
           <Play className="h-4 w-4 fill-current" aria-hidden />
           Jalankan &amp; ukur
         </button>
+        {/* Nonaktif sejak awal sampai data besar dibuat; gaya nonaktif tema terang ada di SECONDARY_BUTTON. */}
         <button type="button" onClick={lab.resetData} disabled={running || !lab.built} className={SECONDARY_BUTTON} title="Buang data besar beserta index buatanmu; disiapkan lagi saat dipakai">
           <RotateCcw className="h-4 w-4" aria-hidden />
           Reset data besar

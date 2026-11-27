@@ -222,7 +222,7 @@ export function PredictWorkspace({
           type="button"
           onClick={() => selected && onCheck(selected)}
           disabled={!selected}
-          className="inline-flex items-center gap-2 rounded-lg bg-orange-400 px-4 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-orange-500/20 transition hover:bg-orange-300 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-lg bg-orange-400 px-4 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-orange-500/20 transition hover:bg-orange-300 disabled:cursor-not-allowed disabled:opacity-50 light:disabled:bg-slate-800 light:disabled:text-slate-500 light:disabled:opacity-100 light:disabled:shadow-none"
         >
           <SearchCheck className="h-4 w-4" aria-hidden />
           Periksa Jawaban

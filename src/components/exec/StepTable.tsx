@@ -52,7 +52,11 @@ export function StepTable({
                   key={`${c}-${column}`}
                   scope="col"
                   className={`sticky top-0 z-10 whitespace-nowrap border-b px-2.5 py-1.5 font-semibold ${numeric[c] ? 'text-right' : ''} ${
-                    marked.has(c) ? 'border-emerald-500/50 bg-emerald-950 text-emerald-200' : 'border-slate-800 bg-slate-900 text-slate-400'
+                    // Tema terang: emerald-950 padat = mint neon; kepala sticky butuh latar padat, jadi penandanya garis
+                    // bawah hijau tebal + teks hijau (sel kolomnya tetap bertint).
+                    marked.has(c)
+                      ? 'border-emerald-500/50 bg-emerald-950 text-emerald-200 light:border-b-2 light:border-emerald-500 light:bg-slate-900'
+                      : 'border-slate-800 bg-slate-900 text-slate-400'
                   }`}
                 >
                   {column}

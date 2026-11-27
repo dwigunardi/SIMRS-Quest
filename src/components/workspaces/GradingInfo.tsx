@@ -20,7 +20,7 @@ function Chip({ className, children }: { className: string; children: ReactNode 
 
 const NEUTRAL = 'border-slate-700 bg-slate-800/60 text-slate-300';
 const SKY = 'border-sky-500/30 bg-sky-500/10 text-sky-300';
-const AMBER = 'border-amber-500/30 bg-amber-500/10 text-amber-300';
+const AMBER = 'border-amber-500/30 bg-amber-500/10 text-amber-300 light:border-amber-700/40 light:bg-amber-950/40';
 const CYAN = 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300';
 
 function GradingChips({ grading, orderMatters }: { grading: SqlGrading; orderMatters: boolean }) {

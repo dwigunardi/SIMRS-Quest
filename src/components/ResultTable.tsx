@@ -29,7 +29,8 @@ function formatNumber(value: number): string {
 
 export function CellContent({ value }: { value: CellValue | undefined }): JSX.Element {
   if (value === null || value === undefined) {
-    return <span className="italic text-slate-600">NULL</span>;
+    // Tema terang: slate-600 di atas sel yang disorot (tint amber/rose) jatuh di bawah AA — pakai slate-500.
+    return <span className="italic text-slate-600 light:text-slate-500">NULL</span>;
   }
   if (value instanceof Uint8Array) {
     return <span className="italic text-slate-500">{`<BLOB ${value.length} bytes>`}</span>;
@@ -126,7 +127,7 @@ export function ResultTable({
                         title={cellTitle(value)}
                         className={`max-w-[24rem] truncate whitespace-nowrap border-b border-slate-800/70 px-3 py-1.5 text-slate-200 ${
                           numericColumns[columnIndex] ? 'text-right tabular-nums' : ''
-                        } ${isTarget ? 'bg-rose-500/25 ring-1 ring-inset ring-rose-400' : ''}`}
+                        } ${isTarget ? 'bg-rose-500/25 ring-1 ring-inset ring-rose-400 light:bg-rose-950' : ''}`}
                       >
                         <CellContent value={value} />
                       </td>

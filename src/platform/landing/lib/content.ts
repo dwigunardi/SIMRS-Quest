@@ -319,7 +319,7 @@ export const NAV = {
     note: NAV_ABOUT_NOTE,
   },
   cta: { start: 'Mulai belajar', resume: 'Lanjutkan', href: ROUTES.sql },
-  theme: { toDark: 'Ganti ke tema gelap', toLight: 'Ganti ke tema terang' },
+  // Label tombol tema: THEME_TOGGLE_LABEL (src/platform/theme.ts) — satu sumber untuk Beranda dan header jalur.
   /** Tombol jeda untuk semua gerak yang berjalan sendiri (pita berjalan, kata berganti, bola dunia, maskot). */
   motion: { pause: 'Jeda animasi', resume: 'Jalankan animasi lagi' },
   mobile: { open: 'Buka menu', close: 'Tutup menu', title: 'Menu' },

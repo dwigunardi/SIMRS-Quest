@@ -90,11 +90,13 @@ export function MissionWorkspace({
           type="button"
           onClick={onRun}
           disabled={!ready || showRunning}
-          className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+          className="group inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50 light:disabled:bg-slate-800 light:disabled:text-slate-500 light:disabled:opacity-100 light:disabled:shadow-none"
         >
           <Play className="h-4 w-4 fill-current" aria-hidden />
           Run &amp; Check
-          <kbd className="hidden rounded bg-emerald-700/40 px-1.5 py-px font-mono text-[10px] font-medium text-emerald-50 sm:inline">
+          {/* Tema terang: selagi tombol nonaktif (mesin SQL belum siap / penilaian berjalan) tombolnya abu-abu, jadi keycap
+              putih-di-hijau ikut menjadi keycap abu-abu terbaca (bukan teks putih di atas abu-abu). */}
+          <kbd className="hidden rounded bg-emerald-700/40 px-1.5 py-px font-mono text-[10px] font-medium text-emerald-50 light:bg-emerald-50/40 light:text-slate-950 light:group-disabled:bg-slate-900 light:group-disabled:text-slate-500 sm:inline">
             {RUN_SHORTCUT_LABEL}
           </kbd>
         </button>
@@ -132,7 +134,7 @@ export function MissionWorkspace({
           {mission.fix ? 'Query Awal' : 'Reset Editor'}
         </button>
         <span className="ml-auto inline-flex items-center gap-1 text-[11px] text-slate-500">
-          <ShieldCheck className="h-3.5 w-3.5 text-emerald-500/70" aria-hidden />
+          <ShieldCheck className="h-3.5 w-3.5 text-emerald-500/70 light:text-emerald-500" aria-hidden />
           Penilaian selalu memakai database bersih
         </span>
       </div>

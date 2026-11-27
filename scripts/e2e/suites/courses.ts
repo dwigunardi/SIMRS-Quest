@@ -5,8 +5,9 @@
  * peragaan "Jalankan query" (Lab Injection & Tebak Hasil dinilai seperti aplikasinya), pengguna lama (centang misi
  * selesai TANPA menulis storage, tombol "Lanjutkan", streak yang putus), varian 'segera' ('#/landing/js' dkk.),
  * pengalihan '#/js' → landing-nya dengan riwayat yang tidak terjebak, 404 jalur (termasuk alamat %-rusak), tautan Beranda
- * (menu Jalur, pita berjalan + fokus keyboard, strip Jelajahi, peta jalur, footer), tema yang sama dengan Beranda (layar
- * jalur tetap gelap), jalur hangat di balik halaman landing (draf editor tetap, fokus tidak masuk ke jalur tersembunyi),
+ * (menu Jalur, pita berjalan + fokus keyboard, strip Jelajahi, peta jalur, footer), tema yang sama dengan Beranda DAN
+ * layar jalur (ganti di mana pun berlaku di semuanya), jalur hangat di balik halaman landing (draf editor tetap, fokus
+ * tidak masuk ke jalur tersembunyi),
  * halaman landing tanpa .wasm, judul tab yang dipulihkan, dan tanpa gulir horizontal pada 375 & 1440 px.
  *
  * Yang diuji adalah PERILAKU: apa yang tampil, ke mana URL berpindah, apa yang (tidak) tertulis di storage. Harapan
@@ -17,7 +18,7 @@ import { MISSIONS, TIERS, TOTAL_XP } from '../../../src/data/missions';
 import { isBoss } from '../../../src/lib/boss';
 import { TRACKS } from '../../../src/platform/tracks';
 import { PROGRESS_KEY, progressWith, type SuiteContext } from '../context';
-import { BACKDROP, LANDING_PAGE, RESOURCE_BUFFER, WASM_REQUESTS, kit, tid, type Backdrop, type Kit } from '../kit';
+import { BACKDROP, LANDING_PAGE, RESOURCE_BUFFER, WASM_REQUESTS, kit, looksDarkTrack, looksLightTrack, tid, type Backdrop, type Kit } from '../kit';
 
 const THEME_KEY = 'simrs-quest:theme:v1';
 const INTRO_KEY = 'simrs-quest:home-intro:v1';
@@ -348,9 +349,14 @@ async function runRowChecks(t: SuiteContext, k: Kit): Promise<void> {
   try {
     await t.fresh({}, '#/landing/sql');
     const row = `document.querySelector('[data-row="run"]')`;
-    // Tab Radix aktif lewat mousedown sungguhan (bukan .click()).
+    // Tab Radix aktif lewat mousedown sungguhan (bukan .click()). Saat mesin sibuk, bagian halaman yang dimuat malas
+    // bisa menggeser letak tab di antara pengukuran dan klik — klik diulang (paling banyak 3×) sampai tab itu terpilih.
     const openTab = async (label: string) => {
-      await k.mouseClick(`[...${row}.querySelectorAll('[role="tab"]')].find(b => b.innerText.trim() === ${JSON.stringify(label)})`);
+      const tab = `[...${row}.querySelectorAll('[role="tab"]')].find(b => b.innerText.trim() === ${JSON.stringify(label)})`;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        await k.mouseClick(tab);
+        if (await k.waitFor(`${tab}?.getAttribute('aria-selected') === 'true'`, 2000)) return;
+      }
     };
     const panel = (id: string) =>
       t.evaluate<{ verdict: string; columns: string[]; card: string; mark: string; running: boolean }>(`(() => {
@@ -614,14 +620,13 @@ async function homeLinks(t: SuiteContext, k: Kit, h: Helpers): Promise<void> {
 }
 
 /* ------------------------------------------------------------------ */
-/* 7. Tema: pilihan Beranda berlaku di katalog & landing; jalur gelap  */
+/* 7. Tema: satu pilihan untuk Beranda, katalog, landing, dan jalur    */
 /* ------------------------------------------------------------------ */
 
 async function theme(t: SuiteContext, k: Kit, h: Helpers): Promise<void> {
   const prefer = (value: 'light' | 'dark' | null) => k.send('Emulation.setEmulatedMedia', { features: value === null ? [] : [{ name: 'prefers-color-scheme', value }] });
   const state = () => t.evaluate<{ theme: string | null; saved: string | null; landing: boolean }>(`({ theme: document.documentElement.getAttribute('data-theme'), saved: localStorage.getItem(${JSON.stringify(THEME_KEY)}), landing: document.documentElement.hasAttribute('data-q-landing') })`);
   const backdrop = () => t.evaluate<Backdrop>(BACKDROP);
-  const looksDark = (b: Backdrop) => b.body < 0.05 && b.dark >= 0.85 && b.brightest < 0.75;
   try {
     await prefer('light');
     await t.fresh(SEEN_INTRO, '#/');
@@ -650,7 +655,7 @@ async function theme(t: SuiteContext, k: Kit, h: Helpers): Promise<void> {
     await k.waitHome();
     t.check('kembali ke Beranda: tema dari landing berlaku', (await state()).theme === 'light');
 
-    // Layar jalur tetap gelap, apa pun tema landing.
+    // Tema berlaku untuk seluruh aplikasi: layar jalur ikut tema landing; penanda landing dilepas, data-theme tetap.
     await t.evaluate(`location.hash = '#/landing/sql'; true`);
     await h.landingUp('course', 'sql');
     await t.evaluate(`${tid('course-primary')}.click(); true`);
@@ -658,10 +663,17 @@ async function theme(t: SuiteContext, k: Kit, h: Helpers): Promise<void> {
     await t.sleep(300);
     const inTrack = await state();
     const trackBg = await backdrop();
-    t.check('dari landing terang ke jalur: layar jalur tetap gelap, tema landing dilepas', looksDark(trackBg) && inTrack.theme === null && !inTrack.landing, `${trackBg.bodyColor} ${Math.round(trackBg.dark * 100)}% gelap; ${JSON.stringify(inTrack)}`);
+    t.check('dari landing terang ke jalur: layar jalur ikut terang, penanda landing dilepas', looksLightTrack(trackBg) && inTrack.theme === 'light' && !inTrack.landing, `${trackBg.bodyColor} ${Math.round(trackBg.light * 100)}% terang; ${JSON.stringify(inTrack)}`);
+    // Ganti tema DI jalur → halaman landing ikut setelah Back.
+    await t.evaluate(`__t.all('[data-testid="track-theme-toggle"]')[0].click(); true`);
+    await k.waitFor(`document.documentElement.getAttribute('data-theme') === 'dark'`, 3000);
+    await t.sleep(300);
+    const darkTrack = await backdrop();
+    t.check('tombol tema di jalur: layar jalur gelap seperti dulu, tersimpan', looksDarkTrack(darkTrack) && (await state()).saved === 'dark', `${darkTrack.bodyColor} ${Math.round(darkTrack.dark * 100)}% gelap`);
     await t.evaluate(`history.back(); true`);
     await h.landingUp('course', 'sql');
-    t.check('Back ke landing: tema terang terpasang lagi', (await state()).theme === 'light' && (await backdrop()).body > 0.7);
+    const back = await state();
+    t.check('Back ke landing: tema dari jalur (gelap) berlaku, penanda landing terpasang lagi', back.theme === 'dark' && back.landing && (await backdrop()).body < 0.05, JSON.stringify(back));
   } finally {
     await prefer(null);
   }

@@ -1,7 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { Moon, Sun } from 'lucide-react';
-import { useTheme } from '../hooks/useTheme';
-import { NAV } from '../lib/content';
+import { THEME_TOGGLE_LABEL, useTheme } from '../hooks/useTheme';
 import { cn } from '../lib/cn';
 import { crossfade } from '../lib/motion';
 
@@ -12,11 +11,12 @@ export interface ThemeToggleProps {
 /**
  * Tombol ikon penukar tema landing (terang ↔ gelap). Ikon menunjukkan tema yang sedang aktif; aria-label menyebut
  * aksinya ("Ganti ke tema gelap"); atribut title memberi keterangan yang sama saat disorot (tanpa pustaka tooltip —
- * satu keterangan tidak sepadan dengan popper + floating-ui di chunk awal). Pilihan tersimpan lewat useTheme.
+ * satu keterangan tidak sepadan dengan popper + floating-ui di chunk awal). Pilihan tersimpan lewat useTheme. Labelnya
+ * satu sumber dengan tombol tema di header jalur (THEME_TOGGLE_LABEL, src/platform/theme.ts).
  */
 export function ThemeToggle({ className }: ThemeToggleProps): JSX.Element {
   const { theme, toggleTheme } = useTheme();
-  const label = theme === 'dark' ? NAV.theme.toLight : NAV.theme.toDark;
+  const label = THEME_TOGGLE_LABEL[theme];
   return (
     <button
       type="button"

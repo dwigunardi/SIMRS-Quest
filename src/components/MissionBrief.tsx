@@ -139,11 +139,11 @@ function RewardChip({ mission, missionProgress, reward }: RewardChipProps) {
   const reduced = reward < mission.xpReward;
   return (
     <span
-      className="ml-auto flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 font-semibold text-amber-300"
+      className="ml-auto flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 font-semibold text-amber-300 light:border-amber-700/40 light:bg-amber-950/40"
       title={reduced ? 'XP berkurang 20% karena hint sudah dibuka' : 'XP penuh jika diselesaikan tanpa bantuan'}
     >
       <Zap className="h-3.5 w-3.5" aria-hidden />
-      {reduced && <span className="font-normal text-amber-500/60 line-through">{mission.xpReward}</span>}
+      {reduced && <span className="font-normal text-amber-500/60 line-through light:text-slate-500">{mission.xpReward}</span>}
       {reward} XP
     </span>
   );
@@ -156,7 +156,7 @@ function BossRules({ mission }: { mission: BossMission }) {
     return m ? [m] : [];
   });
   return (
-    <section className="rounded-xl border border-yellow-400/30 bg-gradient-to-br from-yellow-400/10 to-slate-900/40 p-4">
+    <section className="rounded-xl border border-yellow-400/30 bg-gradient-to-br from-yellow-400/10 to-slate-900/40 p-4 light:border-yellow-700/40 light:from-yellow-950/30">
       <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-yellow-200">
         <Crown className="h-4 w-4" aria-hidden />
         {bossLabel(mission.tier)}: tanpa hint
@@ -197,7 +197,7 @@ function HintSection({ mission, missionProgress, onRevealHint }: HintSectionProp
   const buttonLabel = revealed > 0 ? 'Hint berikutnya' : penaltyPending ? 'Hint (-20% XP)' : 'Lihat hint';
 
   return (
-    <section className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+    <section className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 light:border-amber-700/30 light:bg-amber-950/15">
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-amber-300">
           <Lightbulb className="h-4 w-4" aria-hidden />
@@ -210,7 +210,7 @@ function HintSection({ mission, missionProgress, onRevealHint }: HintSectionProp
           type="button"
           onClick={onRevealHint}
           disabled={allRevealed}
-          className="ml-auto rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-300 transition hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-transparent disabled:text-slate-500"
+          className="ml-auto rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-300 transition hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-transparent disabled:text-slate-500 light:border-amber-700/50 light:bg-amber-950/40 light:hover:bg-amber-950/70 light:disabled:border-slate-700 light:disabled:bg-transparent"
         >
           {allRevealed ? 'Semua hint terbuka' : buttonLabel}
         </button>
@@ -219,7 +219,7 @@ function HintSection({ mission, missionProgress, onRevealHint }: HintSectionProp
         <ol className="mt-3 space-y-2">
           {visibleHints.map((hint, index) => (
             <li key={index} className="flex animate-pop-in gap-2 text-sm leading-relaxed text-slate-300">
-              <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-amber-500/20 text-[11px] font-bold text-amber-300">
+              <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-amber-500/20 text-[11px] font-bold text-amber-300 light:bg-amber-950/70">
                 {index + 1}
               </span>
               <span>{hint}</span>

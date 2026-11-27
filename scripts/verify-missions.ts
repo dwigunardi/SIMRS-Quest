@@ -29,6 +29,8 @@
  * 20. Halaman jalur        — scripts/verify/courses.ts (katalog '#/landing' & landing per jalur: data = registri,
  *                            silabus SQL = kurikulum, jalur 'segera' jujur, tautan dikenal router, meta & JSON-LD,
  *                            pembaca progres hanya membaca, halaman dimuat malas & tidak menyentuh mesin SQL)
+ * 21. Tema layar jalur     — scripts/verify/theme.ts (palet variabel src/theme.css: gelap = Tailwind asli, terang ≥ AA
+ *                            untuk pasangan teks/latar yang dipakai di kode; varian light:; skrip pra-gambar)
  *
  * Kegagalan → exit code 1. Peringatan (⚠) hanya informasi.
  */
@@ -50,6 +52,7 @@ import { verifyFixtures } from './verify/fixtures';
 import { verifyPlatform } from './verify/platform';
 import { verifyLanding } from './verify/landing';
 import { verifyCourses } from './verify/courses';
+import { verifyTheme } from './verify/theme';
 import { verifyConceptMission, verifyInjectionMission } from './verify/labMissions';
 import { failures, guard, guardAsync, section, warnings } from './verify/report';
 import { verifyPlanTree } from './verify/planTree';
@@ -149,6 +152,9 @@ async function main(): Promise<void> {
 
   section('Halaman jalur (katalog & landing per jalur)');
   guard('halaman jalur', verifyCourses);
+
+  section('Tema layar jalur (terang/gelap, kontras palet)');
+  guard('tema', verifyTheme);
 
   if (warnings.length > 0) console.warn(`\n⚠ ${warnings.length} peringatan.`);
   if (failures.length > 0) {

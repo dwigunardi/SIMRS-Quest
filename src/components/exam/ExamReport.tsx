@@ -59,7 +59,7 @@ export function ExamReport({ record, nextReview, onNewExam, onOpenMission, onOpe
                   </span>
                 </div>
                 <div className="h-1.5 overflow-hidden rounded-full bg-slate-800" aria-hidden>
-                  <div className="h-full rounded-full bg-emerald-400/80" style={{ width: `${Math.round((t.correct / t.total) * 100)}%` }} />
+                  <div className="h-full rounded-full bg-emerald-400/80 light:bg-emerald-600" style={{ width: `${Math.round((t.correct / t.total) * 100)}%` }} />
                 </div>
               </li>
             ))}

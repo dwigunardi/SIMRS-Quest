@@ -110,8 +110,10 @@ export function SqlEditor({
 
   return (
     <div
-      className={`flex flex-col overflow-hidden rounded-lg border border-slate-800 bg-slate-950 transition focus-within:border-emerald-500/60 focus-within:ring-1 focus-within:ring-emerald-500/30 ${
-        disabled ? 'opacity-60' : ''
+      className={`flex flex-col overflow-hidden rounded-lg border border-slate-800 bg-slate-950 transition focus-within:border-emerald-500/60 focus-within:ring-1 focus-within:ring-emerald-500/30 light:focus-within:border-emerald-500/80 light:focus-within:ring-emerald-500 ${
+        // Nonaktif (mesin SQL belum siap): gelap = diredupkan; terang = latar abu-abu khas input nonaktif, teks tetap
+        // terbaca (opacity di atas latar putih membuat nomor baris & petunjuk jatuh di bawah AA).
+        disabled ? 'opacity-60 light:bg-slate-900 light:opacity-100' : ''
       }`}
     >
       <div className={`relative flex flex-1 ${minHeightClass}`}>
@@ -175,7 +177,7 @@ export function SqlEditor({
             autoComplete="off"
             autoCorrect="off"
             wrap="off"
-            className={`${TYPOGRAPHY} ${PAD_Y} scrollbar-thin absolute inset-0 m-0 h-full w-full resize-none overflow-auto border-0 bg-transparent pl-3 pr-3 text-transparent caret-emerald-400 outline-none placeholder:text-slate-600 selection:bg-emerald-500/30 focus:outline-none focus:ring-0`}
+            className={`${TYPOGRAPHY} ${PAD_Y} scrollbar-thin absolute inset-0 m-0 h-full w-full resize-none overflow-auto border-0 bg-transparent pl-3 pr-3 text-transparent caret-emerald-400 outline-none placeholder:text-slate-600 selection:bg-emerald-500/30 focus:outline-none focus:ring-0 light:selection:bg-emerald-500/20`}
           />
         </div>
       </div>

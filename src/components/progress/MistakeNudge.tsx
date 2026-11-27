@@ -32,7 +32,7 @@ export function MistakeNudge({ missionId, kind }: MistakeNudgeProps): JSX.Elemen
   if (!info) return null;
   const article = info.articleId ? getArticleById(info.articleId) : undefined;
   return (
-    <div role="note" className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-amber-500/30 bg-amber-500/[0.06] px-3 py-2 text-xs">
+    <div role="note" className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-amber-500/30 bg-amber-500/[0.06] px-3 py-2 text-xs light:border-amber-700/40 light:bg-amber-950/25">
       <Radar className="h-4 w-4 shrink-0 text-amber-400" aria-hidden />
       <p className="min-w-0 flex-1 leading-relaxed text-slate-300">
         Kesalahan jenis <span className="font-semibold text-amber-200">"{MISTAKE_INFO[kind].label}"</span> sudah{' '}
